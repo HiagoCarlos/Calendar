@@ -1,0 +1,17 @@
+# ==========================================================
+# Frontend (Angular 22) - imagem de DESENVOLVIMENTO
+# ng serve com live reload, código-fonte montado via volume
+# ==========================================================
+FROM node:22-alpine
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+EXPOSE 4200
+
+# --host 0.0.0.0 é obrigatório para acessar de fora do container
+# --poll é útil em alguns hosts (Windows/WSL, volumes bind) para detectar mudanças
+CMD ["npm", "start", "--", "--host", "0.0.0.0", "--poll", "2000"]
