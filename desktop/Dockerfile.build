@@ -1,0 +1,19 @@
+# ==========================================================
+# Desktop (Java 17 / Maven) - imagem apenas de BUILD (CI)
+#
+# Este módulo é uma aplicação desktop (GUI). Não faz sentido
+# "rodar" via `docker run` — não há um Dockerfile de execução.
+# Esta imagem existe só para compilar/testar de forma reprodutível
+# em CI e gerar o .jar como artefato (via `docker cp` ou volume).
+# ==========================================================
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+
+COPY pom.xml ./
+COPY .mvn/ .mvn/
+RUN mvn -B dependency:go-offline
+
+COPY src ./src
+RUN mvn -B clean package
+
+# Artefato final: /app/target/desktop-*.jar

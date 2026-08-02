@@ -1,0 +1,21 @@
+# ==========================================================
+# Backend (Spring Boot 4 / Java 21) - imagem de DESENVOLVIMENTO
+# Hot reload via spring-boot-devtools + volume montado no compose
+# ==========================================================
+FROM eclipse-temurin:21-jdk-alpine
+WORKDIR /app
+
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+RUN chmod +x mvnw \
+    && ./mvnw -B dependency:go-offline
+
+COPY src ./src
+
+EXPOSE 8080
+
+ENV SPRING_PROFILES_ACTIVE=dev
+
+# O código-fonte real é sobrescrito via volume no docker-compose.dev.yml,
+# então o mvnw aqui roda em modo "run" para reagir a alterações.
+CMD ["./mvnw", "spring-boot:run"]

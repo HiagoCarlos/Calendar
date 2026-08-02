@@ -1,0 +1,71 @@
+# ==========================================================
+# Production docker-compose
+# Usage: docker compose up -d --build
+# ==========================================================
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: calendar-backend:latest
+    container_name: calendar-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-calendar}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-calendar}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-calendar}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - calendar-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: calendar-frontend:latest
+    container_name: calendar-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-4000}:4000"
+    environment:
+      NODE_ENV: production
+      # Angular SSR validates the Host header against this list (anti-SSRF protection).
+      # Adjust to the actual production domain(s), e.g.: mysite.com,www.mysite.com
+      NG_ALLOWED_HOSTS: ${NG_ALLOWED_HOSTS:-localhost:4000}
+    depends_on:
+      - backend
+    networks:
+      - calendar-net
+
+  # Database. The backend does not have the JPA starter configured yet,
+  # but the service is ready for when persistence is added.
+  # If the database is not needed yet, this service and the backend depends_on can be removed.
+  db:
+    image: postgres:16-alpine
+    container_name: calendar-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-calendar}
+      POSTGRES_USER: ${POSTGRES_USER:-calendar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-calendar}
+    volumes:
+      - calendar-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-calendar}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - calendar-net
+
+volumes:
+  calendar-db-data:
+
+networks:
+  calendar-net:
+    driver: bridge

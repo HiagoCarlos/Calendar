@@ -1,0 +1,70 @@
+# ==========================================================
+# Development docker-compose (hot reload)
+# Usage: docker compose -f docker-compose.dev.yml up --build
+# ==========================================================
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: calendar-backend-dev
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-calendar}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-calendar}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-calendar}
+    volumes:
+      - ./backend/src:/app/src
+      - backend-maven-cache:/root/.m2
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - calendar-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: calendar-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-4200}:4200"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - frontend-node-modules:/app/node_modules
+    networks:
+      - calendar-net
+
+  db:
+    image: postgres:16-alpine
+    container_name: calendar-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-calendar}
+      POSTGRES_USER: ${POSTGRES_USER:-calendar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-calendar}
+    ports:
+      - "5432:5432"
+    volumes:
+      - calendar-db-dev-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-calendar}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - calendar-net
+
+volumes:
+  calendar-db-dev-data:
+  backend-maven-cache:
+  frontend-node-modules:
+
+networks:
+  calendar-net:
+    driver: bridge
