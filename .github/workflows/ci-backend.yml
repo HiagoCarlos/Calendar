@@ -19,6 +19,27 @@ defaults:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    services:
+      # Ephemeral database: created when the job starts and destroyed when it
+      # ends, with no port exposed outside the runner. These are not the
+      # project's credentials — the real ones never enter the repository.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: calendar_ci
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+        ports:
+          - 5432:5432
+        # Without the health check the job starts before Postgres accepts
+        # connections and the tests fail intermittently.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +55,10 @@ jobs:
         run: chmod +x mvnw
 
       - name: Build and tests
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/calendar_ci
+          SPRING_DATASOURCE_USERNAME: ci
+          SPRING_DATASOURCE_PASSWORD: ci
         run: ./mvnw -B clean verify
 
       - name: Publish test reports
