@@ -1,0 +1,22 @@
+# Root-level ignores.
+# Each module has its own .gitignore (backend/, frontend/, mobile/, mobile/android/,
+# mobile/ios/) — only what those don't cover belongs here.
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# Local environment — created from .env.example, holds POSTGRES_PASSWORD
+.env
+.env.local
+.env.*.local
+
+# desktop/ is the only module without its own .gitignore
+desktop/target/
+
+# OS
+.DS_Store
+Thumbs.db
