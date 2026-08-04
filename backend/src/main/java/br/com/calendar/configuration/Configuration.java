@@ -12,9 +12,6 @@ import lombok.EqualsAndHashCode;
 @AttributeOverride(name = "id", column = @Column(name = "user_id"))
 public class Configuration extends BaseEntity {
 
-    @Column(name = "user_id")
-    private String userId;
-
     @Column(length = 20)
     private String theme;
 
