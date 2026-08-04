@@ -1,18 +1,20 @@
 package br.com.calendar.configuration;
 
 import br.com.calendar.common.BaseEntity;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@Table(name = "configuration")
-@AttributeOverride(name = "id", column = @Column(name = "user_id"))
+@Table(name = "configuration", uniqueConstraints = @UniqueConstraint(columnNames = "user_id"))
 public class Configuration extends BaseEntity {
 
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     private String userId;
 
     @Column(length = 20)
