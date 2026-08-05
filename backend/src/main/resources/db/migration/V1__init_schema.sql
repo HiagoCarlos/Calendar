@@ -21,7 +21,7 @@ CREATE TABLE users
 
 CREATE TABLE configuration
 (
-    user_id        varchar(21) REFERENCES users (id) ON DELETE CASCADE,
+    user_id        varchar(21) PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
     theme          varchar,
     time_format    varchar,
     week_start_day varchar,
