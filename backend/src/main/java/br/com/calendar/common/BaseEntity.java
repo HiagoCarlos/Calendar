@@ -5,11 +5,15 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
-import lombok.Data;
+import lombok.*;
 
 import java.time.Instant;
 
-@Data
+
+@Getter
+@Setter
+@ToString
+@RequiredArgsConstructor
 @MappedSuperclass
 public abstract class BaseEntity {
 
@@ -30,5 +34,4 @@ public abstract class BaseEntity {
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
-
 }
