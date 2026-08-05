@@ -13,7 +13,6 @@ import java.time.Instant;
 @MappedSuperclass
 public abstract class BaseEntity {
 
-
     @Id
     private String id;
 
