@@ -23,17 +23,17 @@ public class JwtUtil {
         this.expirationMs = expirationMs;
     }
 
-    public String generateToken(String email) {
+    public String generateToken(String userId) {
         Date now = new Date();
         return Jwts.builder()
-                .subject(email)
+                .subject(userId)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationMs))
                 .signWith(key)
                 .compact();
     }
 
-    public String extractEmail(String token) {
+    public String extractUserId(String token) {
         return parseClaims(token).getSubject();
     }
 

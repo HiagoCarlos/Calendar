@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class JwtUtilTest {
 
     private static final String SECRET = "dev-only-secret-change-in-production-0123456789abcdef";
+    private static final String USER_ID = "usr_abc123";
 
     private JwtUtil jwtUtil;
 
@@ -20,15 +21,15 @@ class JwtUtilTest {
     }
 
     @Test
-    void generateTokenAndExtractEmail() {
-        String token = jwtUtil.generateToken("test@example.com");
+    void generateTokenAndExtractUserId() {
+        String token = jwtUtil.generateToken(USER_ID);
 
-        assertEquals("test@example.com", jwtUtil.extractEmail(token));
+        assertEquals(USER_ID, jwtUtil.extractUserId(token));
     }
 
     @Test
     void tokenIsNotExpired() {
-        String token = jwtUtil.generateToken("test@example.com");
+        String token = jwtUtil.generateToken(USER_ID);
 
         assertFalse(jwtUtil.isExpired(token));
     }
@@ -36,13 +37,13 @@ class JwtUtilTest {
     @Test
     void expiredTokenIsDetected() {
         JwtUtil shortLivedJwt = new JwtUtil(SECRET, -1000L);
-        String token = shortLivedJwt.generateToken("test@example.com");
+        String token = shortLivedJwt.generateToken(USER_ID);
 
         assertTrue(shortLivedJwt.isExpired(token));
     }
 
     @Test
     void invalidTokenThrows() {
-        assertThrows(Exception.class, () -> jwtUtil.extractEmail("invalid.token.here"));
+        assertThrows(Exception.class, () -> jwtUtil.extractUserId("invalid.token.here"));
     }
 }

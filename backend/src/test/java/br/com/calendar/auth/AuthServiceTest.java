@@ -2,9 +2,13 @@ package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
 import br.com.calendar.auth.dto.LoginRequest;
-import br.com.calendar.domain.User;
+import br.com.calendar.auth.dto.SignupRequest;
+import br.com.calendar.user.User;
 import br.com.calendar.user.UserRepository;
-import br.com.calendar.user.dto.UserResponse;
+import br.com.calendar.user.UserService;
+import br.com.calendar.user.dto.CreateUserDTO;
+import br.com.calendar.user.dto.UserResponseDTO;
+import br.com.calendar.user.dto.UserSummaryDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,17 +17,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
+    private static final String USER_ID = "usr_abc123";
+
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserService userService;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -35,18 +46,35 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, passwordEncoder, jwtUtil);
+        authService = new AuthService(userRepository, userService, passwordEncoder, jwtUtil);
+    }
+
+    @Test
+    void signupCreatesUserAndReturnsToken() {
+        UserResponseDTO created = new UserResponseDTO(
+                USER_ID, "Danillo", "test@example.com", false, Instant.now(), Instant.now());
+
+        when(userService.createUser(any(CreateUserDTO.class))).thenReturn(created);
+        when(jwtUtil.generateToken(USER_ID)).thenReturn("jwt-token");
+        when(jwtUtil.getExpirationMs()).thenReturn(86400000L);
+
+        AuthResponse response = authService.signup(
+                new SignupRequest("Danillo", "test@example.com", "plain-password"));
+
+        assertEquals("jwt-token", response.accessToken());
+        assertEquals("Bearer", response.tokenType());
     }
 
     @Test
     void loginWithValidCredentialsReturnsToken() {
         User user = new User();
+        user.setId(USER_ID);
         user.setEmail("test@example.com");
         user.setPassword("hashed-password");
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("plain-password", "hashed-password")).thenReturn(true);
-        when(jwtUtil.generateToken("test@example.com")).thenReturn("jwt-token");
+        when(jwtUtil.generateToken(USER_ID)).thenReturn("jwt-token");
         when(jwtUtil.getExpirationMs()).thenReturn(86400000L);
 
         AuthResponse response = authService.login(new LoginRequest("test@example.com", "plain-password"));
@@ -58,6 +86,7 @@ class AuthServiceTest {
     @Test
     void loginWithWrongPasswordThrows() {
         User user = new User();
+        user.setId(USER_ID);
         user.setEmail("test@example.com");
         user.setPassword("hashed-password");
 
@@ -79,15 +108,15 @@ class AuthServiceTest {
     @Test
     void meReturnsUserData() {
         User user = new User();
-        user.setId("usr_abc123");
+        user.setId(USER_ID);
         user.setName("Danillo");
         user.setEmail("test@example.com");
 
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
-        UserResponse response = authService.me("test@example.com");
+        UserSummaryDTO response = authService.me(USER_ID);
 
-        assertEquals("usr_abc123", response.id());
+        assertEquals(USER_ID, response.id());
         assertEquals("Danillo", response.name());
         assertEquals("test@example.com", response.email());
     }
