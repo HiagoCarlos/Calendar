@@ -1,6 +1,8 @@
-package br.com.calendar.domain;
+package br.com.calendar.task;
 
 import br.com.calendar.common.BaseEntity;
+import br.com.calendar.category.Category;
+import br.com.calendar.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

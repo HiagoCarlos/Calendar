@@ -4,30 +4,41 @@ import br.com.calendar.common.BaseEntity;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
 
 @Getter
 @Setter
 @ToString
-@RequiredArgsConstructor
 @Entity
 @Table(name = "configuration")
 @AttributeOverride(name = "id", column = @Column(name = "user_id"))
 public class Configuration extends BaseEntity {
 
-    @Column(length = 20)
-    private String theme;
+    @Column(length = 10)
+    private String language;
 
-    @Column(name = "time_format", length = 10)
-    private String timeFormat;
+    @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(columnDefinition = "theme_type")
+    private Theme theme;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(name = "time_format", columnDefinition = "time_format_type")
+    private TimeFormat timeFormat;
 
     @Column(name = "week_start_day")
-    private String weekStartDay;
+    private Short weekStartDay;
 
-    @Column(name = "default_view", length = 20)
-    private String defaultView;
+    @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(name = "default_view", columnDefinition = "view_type")
+    private DefaultView defaultView;
 }

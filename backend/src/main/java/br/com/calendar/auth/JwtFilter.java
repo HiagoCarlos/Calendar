@@ -31,12 +31,12 @@ public class JwtFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith(BEARER_PREFIX)) {
             String token = header.substring(BEARER_PREFIX.length());
             try {
-                String email = jwtUtil.extractEmail(token);
-                if (email != null && !jwtUtil.isExpired(token)
+                String userId = jwtUtil.extractUserId(token);
+                if (userId != null && !jwtUtil.isExpired(token)
                         && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                     var userDetails = org.springframework.security.core.userdetails.User
-                            .withUsername(email)
+                            .withUsername(userId)
                             .password("")
                             .authorities(List.of())
                             .build();

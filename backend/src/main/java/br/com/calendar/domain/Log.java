@@ -1,5 +1,6 @@
 package br.com.calendar.domain;
 
+import br.com.calendar.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -24,7 +25,6 @@ import java.time.Instant;
 @Getter
 @Setter
 @ToString
-@RequiredArgsConstructor
 @Entity
 @Table(name = "log")
 public class Log {
