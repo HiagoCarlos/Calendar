@@ -2,7 +2,7 @@ package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
 import br.com.calendar.auth.dto.LoginRequest;
-import br.com.calendar.domain.User;
+import br.com.calendar.user.User;
 import br.com.calendar.user.UserRepository;
 import br.com.calendar.user.dto.UserResponse;
 import org.springframework.http.HttpStatus;
