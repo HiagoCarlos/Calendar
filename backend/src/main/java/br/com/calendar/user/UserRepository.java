@@ -1,6 +1,6 @@
 package br.com.calendar.user;
 
-import br.com.calendar.user.User;
+import br.com.calendar.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
