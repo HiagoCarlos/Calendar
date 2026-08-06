@@ -13,7 +13,6 @@ import java.time.Instant;
 @Getter
 @Setter
 @ToString
-@RequiredArgsConstructor
 @MappedSuperclass
 public abstract class BaseEntity {
 

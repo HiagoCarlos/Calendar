@@ -1,6 +1,8 @@
 package br.com.calendar.domain;
 
 import br.com.calendar.common.BaseEntity;
+import br.com.calendar.task.Task;
+import br.com.calendar.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -21,7 +23,6 @@ import java.time.Instant;
 @Getter
 @Setter
 @ToString
-@RequiredArgsConstructor
 @Entity
 @Table(name = "notification")
 public class Notification extends BaseEntity {
@@ -35,6 +36,9 @@ public class Notification extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "task_id")
     private Task task;
+
+    @Column(columnDefinition = "TEXT")
+    private String content;
 
     @Column(name = "time_before")
     private Instant timeBefore;
