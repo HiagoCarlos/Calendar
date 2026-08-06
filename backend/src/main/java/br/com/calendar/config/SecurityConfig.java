@@ -25,8 +25,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .logout(logout -> logout.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) ->
+                                response.sendError(401, "Unauthorized")))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/health").permitAll()
+                        .requestMatchers("/auth/login", "/auth/signup", "/health").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
