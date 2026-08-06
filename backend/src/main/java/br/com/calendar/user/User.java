@@ -1,4 +1,4 @@
-package br.com.calendar.domain;
+package br.com.calendar.user;
 
 import br.com.calendar.common.BaseEntity;
 import jakarta.persistence.Column;
@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @ToString
-@RequiredArgsConstructor
 @Entity
 @Table(name = "users")
 public class User extends BaseEntity {
@@ -26,7 +25,7 @@ public class User extends BaseEntity {
     private String email;
 
     @Column(name = "email_confirmed")
-    private Boolean emailConfirmed;
+    private boolean emailConfirmed;
 
     private String avatar;
 

@@ -1,6 +1,7 @@
-package br.com.calendar.domain;
+package br.com.calendar.category;
 
 import br.com.calendar.common.BaseEntity;
+import br.com.calendar.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -15,7 +16,6 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-@RequiredArgsConstructor
 @Entity
 @Table(name = "category")
 public class Category extends BaseEntity {
