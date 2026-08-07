@@ -14,7 +14,7 @@ services:
       - "${BACKEND_PORT:-8080}:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:${DB_PORT:-5432}/${POSTGRES_DB:-calendar}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:${DB_PORT}/${POSTGRES_DB:-calendar}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-calendar}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-calendar}
     depends_on:
@@ -49,7 +49,7 @@ services:
     image: postgres:16-alpine
     container_name: calendar-db
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT}:5432"
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-calendar}

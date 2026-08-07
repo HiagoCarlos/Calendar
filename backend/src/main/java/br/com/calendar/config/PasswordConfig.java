@@ -9,7 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 public class PasswordConfig {
 
-    @Value("${secret.word}")
+    @Value("${secret.password.pepper}")
     private String pepper;
 
     @Bean
@@ -20,7 +20,7 @@ public class PasswordConfig {
             @Override
             public String encode(CharSequence rawPassword) {
                 if(rawPassword == null){
-                    return null;
+                    throw new IllegalArgumentException("rawPassword cannot be null");
                 }
                 return bcryptPasswordEncoder.encode(rawPassword + pepper);
             }
