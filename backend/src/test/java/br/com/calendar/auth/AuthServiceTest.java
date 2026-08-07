@@ -23,6 +23,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,11 +43,14 @@ class AuthServiceTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private TokenBlacklist tokenBlacklist;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, userService, passwordEncoder, jwtUtil);
+        authService = new AuthService(userRepository, userService, passwordEncoder, jwtUtil, tokenBlacklist);
     }
 
     @Test
@@ -119,5 +123,17 @@ class AuthServiceTest {
         assertEquals(USER_ID, response.id());
         assertEquals("Danillo", response.name());
         assertEquals("test@example.com", response.email());
+    }
+
+    @Test
+    void logoutRevokesToken() {
+        authService.logout("jwt-token");
+
+        verify(tokenBlacklist).revoke("jwt-token");
+    }
+
+    @Test
+    void logoutWithBlankTokenThrows() {
+        assertThrows(ResponseStatusException.class, () -> authService.logout(" "));
     }
 }
