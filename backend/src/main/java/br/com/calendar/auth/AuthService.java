@@ -62,6 +62,14 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token is required");
         }
 
+        // valida se é um JWT de verdade antes de colocar na blacklist.
+        // se for uma string qualquer, o jwtUtil lança exceção → 400 em vez de 500.
+        try {
+            jwtUtil.getExpirationDate(token);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token");
+        }
+
         tokenBlacklist.cleanExpired();
         tokenBlacklist.revoke(token);
     }

@@ -136,4 +136,12 @@ class AuthServiceTest {
     void logoutWithBlankTokenThrows() {
         assertThrows(ResponseStatusException.class, () -> authService.logout(" "));
     }
+
+    @Test
+    void logoutWithMalformedTokenThrows() {
+        when(jwtUtil.getExpirationDate("not-a-real-jwt"))
+                .thenThrow(new io.jsonwebtoken.MalformedJwtException("Invalid JWT"));
+
+        assertThrows(ResponseStatusException.class, () -> authService.logout("not-a-real-jwt"));
+    }
 }
