@@ -48,8 +48,6 @@ services:
   db:
     image: postgres:16-alpine
     container_name: calendar-db
-    ports:
-      - "${DB_PORT}:5432"
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-calendar}
