@@ -37,6 +37,10 @@ public class JwtUtil {
         return parseClaims(token).getSubject();
     }
 
+    public Date getExpirationDate(String token) {
+        return parseClaims(token).getExpiration();
+    }
+
     public boolean isExpired(String token) {
         try {
             return parseClaims(token).getExpiration().before(new Date());

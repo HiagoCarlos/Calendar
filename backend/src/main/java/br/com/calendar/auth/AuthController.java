@@ -4,6 +4,7 @@ import br.com.calendar.auth.dto.AuthResponse;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.SignupRequest;
 import br.com.calendar.user.dto.UserSummaryDTO;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,5 +43,17 @@ public class AuthController {
         }
         String userId = authentication.getName();
         return ResponseEntity.ok(authService.me(userId));
+    }
+
+    @PostMapping("/auth/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        String token = null;
+        if (header != null && header.startsWith("Bearer ")) {
+            token = header.substring(7);
+        }
+
+        authService.logout(token);
+        return ResponseEntity.noContent().build();
     }
 }
