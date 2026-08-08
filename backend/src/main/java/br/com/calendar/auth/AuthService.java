@@ -1,19 +1,24 @@
 package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
+import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.SignupRequest;
+import br.com.calendar.common.dto.MessageResponse;
 import br.com.calendar.user.User;
 import br.com.calendar.user.UserRepository;
 import br.com.calendar.user.UserService;
 import br.com.calendar.user.dto.CreateUserDTO;
+import br.com.calendar.user.dto.OtpResponseDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
 import br.com.calendar.user.dto.UserSummaryDTO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+@Slf4j
 @Service
 public class AuthService {
 
@@ -47,6 +52,20 @@ public class AuthService {
 
         String token = jwtUtil.generateToken(user.getId());
         return new AuthResponse(token, "Bearer", jwtUtil.getExpirationMs() / 1000);
+    }
+
+    public MessageResponse requestPasswordReset(ForgotPasswordRequest request) {
+        userRepository.findByEmail(request.email())
+                .ifPresent(
+                        user -> {
+                            OtpResponseDTO otpResponseDTO = userService.generateEmailConfirmationOtp(user.getId());
+
+                            // Email added to the log message for identification during the test.
+                            log.info("Generated OTP for email: {} - Code: {}", user.getEmail(), otpResponseDTO.otp());
+                }
+        );
+
+        return new MessageResponse("If the email is registered, password reset instructions will be sent.");
     }
 
     public UserSummaryDTO me(String userId) {

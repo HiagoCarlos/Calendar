@@ -1,8 +1,10 @@
 package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
+import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.SignupRequest;
+import br.com.calendar.common.dto.MessageResponse;
 import br.com.calendar.user.dto.UserSummaryDTO;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -32,6 +34,11 @@ public class AuthController {
     @PostMapping("/auth/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/auth/forgot-password")
+    public ResponseEntity<MessageResponse> requestPasswordReset(@Valid @RequestBody ForgotPasswordRequest request) {
+        return ResponseEntity.ok(authService.requestPasswordReset(request));
     }
 
     @GetMapping("/me")
