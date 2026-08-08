@@ -13,9 +13,11 @@ services:
       - "${BACKEND_PORT:-8080}:8080"
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-calendar}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-calendar}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-calendar}
+      SECRET_PASSWORD_PEPPER: ${SECRET_PASSWORD_PEPPER:-dev-only-pepper-change-in-production}
     volumes:
       - ./backend/src:/app/src
       - backend-maven-cache:/root/.m2

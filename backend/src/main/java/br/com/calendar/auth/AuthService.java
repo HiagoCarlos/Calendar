@@ -26,13 +26,15 @@ public class AuthService {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklist tokenBlacklist;
 
     public AuthService(UserRepository userRepository, UserService userService,
-                       PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+                       PasswordEncoder passwordEncoder, JwtUtil jwtUtil, TokenBlacklist tokenBlacklist) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.tokenBlacklist = tokenBlacklist;
     }
 
     public AuthResponse signup(SignupRequest request) {
@@ -72,5 +74,22 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         return new UserSummaryDTO(user.getId(), user.getName(), user.getEmail());
+    }
+
+    public void logout(String token) {
+        if (token == null || token.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token is required");
+        }
+
+        // valida se é um JWT de verdade antes de colocar na blacklist.
+        // se for uma string qualquer, o jwtUtil lança exceção → 400 em vez de 500.
+        try {
+            jwtUtil.getExpirationDate(token);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid token");
+        }
+
+        tokenBlacklist.cleanExpired();
+        tokenBlacklist.revoke(token);
     }
 }

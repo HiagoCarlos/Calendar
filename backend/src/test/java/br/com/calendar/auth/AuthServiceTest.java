@@ -46,11 +46,14 @@ class AuthServiceTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private TokenBlacklist tokenBlacklist;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, userService, passwordEncoder, jwtUtil);
+        authService = new AuthService(userRepository, userService, passwordEncoder, jwtUtil, tokenBlacklist);
     }
 
     @Test
@@ -153,5 +156,25 @@ class AuthServiceTest {
         assertEquals(USER_ID, response.id());
         assertEquals("Danillo", response.name());
         assertEquals("test@example.com", response.email());
+    }
+
+    @Test
+    void logoutRevokesToken() {
+        authService.logout("jwt-token");
+
+        verify(tokenBlacklist).revoke("jwt-token");
+    }
+
+    @Test
+    void logoutWithBlankTokenThrows() {
+        assertThrows(ResponseStatusException.class, () -> authService.logout(" "));
+    }
+
+    @Test
+    void logoutWithMalformedTokenThrows() {
+        when(jwtUtil.getExpirationDate("not-a-real-jwt"))
+                .thenThrow(new io.jsonwebtoken.MalformedJwtException("Invalid JWT"));
+
+        assertThrows(ResponseStatusException.class, () -> authService.logout("not-a-real-jwt"));
     }
 }

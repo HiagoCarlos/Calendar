@@ -6,6 +6,8 @@ import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.SignupRequest;
 import br.com.calendar.common.dto.MessageResponse;
 import br.com.calendar.user.dto.UserSummaryDTO;
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,16 +28,19 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @Operation(summary = "Register user")
     @PostMapping("/auth/signup")
     public ResponseEntity<AuthResponse> signup(@Valid @RequestBody SignupRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.signup(request));
     }
 
+    @Operation(summary = "Authenticate user")
     @PostMapping("/auth/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
+    @Operation(summary = "Request password reset)
     @PostMapping("/auth/forgot-password")
     public ResponseEntity<MessageResponse> requestPasswordReset(@Valid @RequestBody ForgotPasswordRequest request) {
         return ResponseEntity.ok(authService.requestPasswordReset(request));
@@ -49,5 +54,17 @@ public class AuthController {
         }
         String userId = authentication.getName();
         return ResponseEntity.ok(authService.me(userId));
+    }
+
+    @PostMapping("/auth/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        String token = null;
+        if (header != null && header.startsWith("Bearer ")) {
+            token = header.substring(7);
+        }
+
+        authService.logout(token);
+        return ResponseEntity.noContent().build();
     }
 }
