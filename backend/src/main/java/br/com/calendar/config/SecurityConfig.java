@@ -33,7 +33,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) ->
                                 response.sendError(401, "Unauthorized")))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/signup").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/signup", "/auth/forgot-password").permitAll()
                         .requestMatchers("/health").permitAll()
                         .requestMatchers(swaggerPaths).permitAll()
                         .anyRequest().authenticated())

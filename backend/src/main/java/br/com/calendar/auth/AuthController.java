@@ -1,8 +1,10 @@
 package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
+import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.SignupRequest;
+import br.com.calendar.common.dto.MessageResponse;
 import br.com.calendar.user.dto.UserSummaryDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,7 +40,12 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @Operation(summary = "See authenticated user")
+    @Operation(summary = "Request password reset")
+    @PostMapping("/auth/forgot-password")
+    public ResponseEntity<MessageResponse> requestPasswordReset(@Valid @RequestBody ForgotPasswordRequest request) {
+        return ResponseEntity.ok(authService.requestPasswordReset(request));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserSummaryDTO> me() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
