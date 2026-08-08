@@ -1,12 +1,15 @@
 package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
+import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.SignupRequest;
+import br.com.calendar.common.dto.MessageResponse;
 import br.com.calendar.user.User;
 import br.com.calendar.user.UserRepository;
 import br.com.calendar.user.UserService;
 import br.com.calendar.user.dto.CreateUserDTO;
+import br.com.calendar.user.dto.OtpResponseDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
 import br.com.calendar.user.dto.UserSummaryDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,12 +20,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -81,6 +85,36 @@ class AuthServiceTest {
 
         assertEquals("jwt-token", response.accessToken());
         assertEquals("Bearer", response.tokenType());
+    }
+
+    @Test
+    void requestPasswordResetWithValidEmailGeneratesOtp() {
+        User user = new User();
+        user.setId(USER_ID);
+        user.setEmail("test@example.com");
+        user.setPassword("hashed-password");
+
+        when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.of(user));
+
+        SecureRandom random = new SecureRandom();
+        when(userService.generateEmailConfirmationOtp(any(String.class)))
+                .thenReturn(
+                        new OtpResponseDTO(String.format("%06d", random.nextInt(1_000_000)))
+                );
+
+        MessageResponse messageResponse = authService.requestPasswordReset(new ForgotPasswordRequest("test@example.com"));
+
+        assertEquals("If the email is registered, password reset instructions will be sent.", messageResponse.message());
+        verify(userService).generateEmailConfirmationOtp(user.getId());
+    }
+
+    @Test
+    void requestPasswordResetWithNonExistingEmailReturnsDefaultMessage() {
+        when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.empty());
+
+        MessageResponse messageResponse = authService.requestPasswordReset(new ForgotPasswordRequest("test@example.com"));
+
+        assertEquals("If the email is registered, password reset instructions will be sent.", messageResponse.message());
     }
 
     @Test
