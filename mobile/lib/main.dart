@@ -14,16 +14,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: ViewLogin(),
-      title: 'Calendar',
+      home: ViewSignup(),
+      title: "Calendar",
       theme: ThemeData(
+        useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      initialRoute: '/',
+      initialRoute: "/",
       routes: {
-        '//': (context) => const ViewHome(),
-        '/login': (context) => const ViewLogin(),
-        '/signup': (context) => const ViewSignup(),
+        "//": (context) => const ViewHome(),
+        "/login": (context) => const ViewLogin(),
+        "/signup": (context) => const ViewSignup(),
       },
     );
   }
