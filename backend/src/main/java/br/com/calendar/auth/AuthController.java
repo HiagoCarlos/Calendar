@@ -40,7 +40,7 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @Operation(summary = "Request password reset)
+    @Operation(summary = "Request password reset")
     @PostMapping("/auth/forgot-password")
     public ResponseEntity<MessageResponse> requestPasswordReset(@Valid @RequestBody ForgotPasswordRequest request) {
         return ResponseEntity.ok(authService.requestPasswordReset(request));
