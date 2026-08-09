@@ -3,7 +3,6 @@ import 'package:calendar/widget/WidgetBody.dart';
 import 'package:calendar/widget/WidgetButton.dart';
 import 'package:calendar/widget/WidgetInput.dart';
 import 'package:calendar/widget/WidgetOAuth.dart';
-import 'package:calendar/widget/WidgetOAuthButton.dart';
 import 'package:flutter/material.dart';
 
 class ViewLogin extends StatefulWidget {
