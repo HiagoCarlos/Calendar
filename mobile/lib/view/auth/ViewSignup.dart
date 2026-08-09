@@ -3,7 +3,6 @@ import 'package:calendar/widget/WidgetBody.dart';
 import 'package:calendar/widget/WidgetButton.dart';
 import 'package:calendar/widget/WidgetInput.dart';
 import 'package:calendar/widget/WidgetOAuth.dart';
-import 'package:calendar/widget/WidgetOAuthButton.dart';
 import 'package:flutter/material.dart';
 
 class ViewSignup extends StatefulWidget {
@@ -40,28 +39,19 @@ class _ViewSignup extends State<ViewSignup> {
             WidgetInput(
               label: "Digite seu email"
             ),
-            
-            Row(
-              children: [
-                Expanded(
-                  child: WidgetInput(
-                    label: "Digite sua senha",
-                    password: true,
-                    icon: Icons.lock_outline,
-                  ),
-                ),
 
-                const SizedBox(width: 20),
-
-                Expanded(
-                  child: WidgetInput(
-                    label: "Digite sua senha novamente",
-                    password: true,
-                    icon: Icons.lock_outline,
-                  ),
-                ),
-              ],
+            WidgetInput(
+              label: "Digite sua senha",
+              password: true,
+              icon: Icons.lock_outline,
             ),
+            
+            WidgetInput(
+              label: "Digite sua senha novamente",
+              password: true,
+              icon: Icons.lock_outline,
+            ),
+
             SizedBox(height: 20),
             GestureDetector(
               onTap: () {
@@ -75,9 +65,9 @@ class _ViewSignup extends State<ViewSignup> {
                   Checkbox(
                     value: bool_terms,
                     onChanged: (bool? value) {
-                      //setState(() {
-                      //  bool_terms = value ?? false;
-                      //});
+                      setState(() {
+                        bool_terms = !bool_terms;
+                      });
                     },
                   ),
                   Expanded(
