@@ -3,6 +3,7 @@ package br.com.calendar.auth;
 import br.com.calendar.auth.dto.AuthResponse;
 import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
+import br.com.calendar.auth.dto.ResetPasswordRequest;
 import br.com.calendar.auth.dto.SignupRequest;
 import br.com.calendar.auth.dto.VerifyOtpRequest;
 import br.com.calendar.auth.dto.VerifyOtpResponse;
@@ -74,5 +75,12 @@ public class AuthController {
 
         authService.logout(token);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Reset password using OTP")
+    @PostMapping("/auth/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok().build();
     }
 }

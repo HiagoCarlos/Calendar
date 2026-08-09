@@ -3,6 +3,7 @@ package br.com.calendar.auth;
 import br.com.calendar.auth.dto.AuthResponse;
 import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
+import br.com.calendar.auth.dto.ResetPasswordRequest;
 import br.com.calendar.auth.dto.SignupRequest;
 import br.com.calendar.auth.dto.VerifyOtpRequest;
 import br.com.calendar.auth.dto.VerifyOtpResponse;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -255,5 +257,24 @@ class AuthServiceTest {
                 .thenThrow(new io.jsonwebtoken.MalformedJwtException("Invalid JWT"));
 
         assertThrows(ResponseStatusException.class, () -> authService.logout("not-a-real-jwt"));
+    }
+
+    @Test
+    void resetPasswordWithValidOtpSucceeds() {
+        ResetPasswordRequest request = new ResetPasswordRequest("123456", "newPassword123", "newPassword123");
+
+        authService.resetPassword(request);
+
+        verify(userService).resetPassword(any(br.com.calendar.user.dto.ResetPasswordDTO.class));
+    }
+
+    @Test
+    void resetPasswordWithMismatchedPasswordsThrows() {
+        ResetPasswordRequest request = new ResetPasswordRequest("123456", "newPassword123", "differentPassword");
+
+        org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match"))
+                .when(userService).resetPassword(any(br.com.calendar.user.dto.ResetPasswordDTO.class));
+
+        assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
     }
 }
