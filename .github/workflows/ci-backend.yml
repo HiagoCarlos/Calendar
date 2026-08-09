@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      # Banco temporário criado no início do job e destruído ao final.
+      # Temporary database created when the job starts and destroyed when it ends.
       postgres:
         image: postgres:16-alpine
         env:
@@ -30,7 +30,7 @@ jobs:
           POSTGRES_PASSWORD: ci
         ports:
           - 5432:5432
-        # Aguarda o PostgreSQL aceitar conexões antes de executar os testes.
+        # Wait for PostgreSQL to accept connections before running the tests.
         options: >-
           --health-cmd pg_isready
           --health-interval 5s
@@ -51,14 +51,14 @@ jobs:
       - name: Grant execute permission to mvnw
         run: chmod +x mvnw
 
-      - name: Build and tests
+      - name: Build and Test
         env:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/calendar_ci
           SPRING_DATASOURCE_USERNAME: ci
           SPRING_DATASOURCE_PASSWORD: ci
         run: ./mvnw -B clean verify
 
-      - name: Publish test reports
+      - name: Publish Test Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:

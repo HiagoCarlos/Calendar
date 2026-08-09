@@ -1,16 +1,13 @@
 name: CodeQL
 
 on:
-  push:
-    branches: [main, development]
-  pull_request:
-    branches: [main, development]
   schedule:
-    - cron: "30 3 * * 1" # Toda segunda-feira às 03:30 UTC
+    - cron: "30 3 * * 1" # Every Monday at 03:30 UTC
+  workflow_dispatch:
 
 jobs:
   analyze-backend:
-    name: Analisar Backend
+    name: Backend Analyzer
     runs-on: ubuntu-latest
 
     permissions:
@@ -29,7 +26,7 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Inicializar CodeQL
+      - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: java-kotlin
@@ -43,13 +40,13 @@ jobs:
         working-directory: backend
         run: ./mvnw -B clean verify -DskipTests
 
-      - name: Análise CodeQL
+      - name: CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:java-backend"
 
   analyze-desktop:
-    name: Analisar Desktop
+    name: Desktop Analyzer
     runs-on: ubuntu-latest
 
     permissions:
@@ -68,7 +65,7 @@ jobs:
           java-version: "17"
           cache: maven
 
-      - name: Inicializar CodeQL
+      - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: java-kotlin
@@ -78,13 +75,13 @@ jobs:
         working-directory: desktop
         run: mvn -B clean verify -DskipTests
 
-      - name: Análise CodeQL
+      - name: CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:java-desktop"
 
   analyze-javascript:
-    name: Analisar JavaScript/TypeScript
+    name: JavaScript/TypeScript Analyzer
     runs-on: ubuntu-latest
 
     permissions:
@@ -96,13 +93,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inicializar CodeQL
+      - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
           build-mode: none
 
-      - name: Análise CodeQL
+      - name: CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:javascript-typescript"

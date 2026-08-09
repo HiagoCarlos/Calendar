@@ -31,14 +31,14 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: flutter pub get
 
-      - name: Analyze code
+      - name: Analyze Code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Run tests
+      - name: Run Tests
         run: flutter test
 
-      - name: Build APK (debug)
+      - name: Build APK (Debug)
         run: flutter build apk --debug
