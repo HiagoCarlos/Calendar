@@ -4,6 +4,8 @@ import br.com.calendar.auth.dto.AuthResponse;
 import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.SignupRequest;
+import br.com.calendar.auth.dto.VerifyOtpRequest;
+import br.com.calendar.auth.dto.VerifyOtpResponse;
 import br.com.calendar.common.dto.MessageResponse;
 import br.com.calendar.user.dto.UserSummaryDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,6 +46,12 @@ public class AuthController {
     @PostMapping("/auth/forgot-password")
     public ResponseEntity<MessageResponse> requestPasswordReset(@Valid @RequestBody ForgotPasswordRequest request) {
         return ResponseEntity.ok(authService.requestPasswordReset(request));
+    }
+
+    @Operation(summary = "Verify password reset OTP")
+    @PostMapping("/auth/verify-otp")
+    public ResponseEntity<VerifyOtpResponse> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        return ResponseEntity.ok(authService.verifyOtp(request));
     }
 
     @GetMapping("/me")

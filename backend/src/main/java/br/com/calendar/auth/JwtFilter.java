@@ -34,7 +34,8 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = header.substring(BEARER_PREFIX.length());
             try {
                 String userId = jwtUtil.extractUserId(token);
-                if (userId != null && !jwtUtil.isExpired(token) && !tokenBlacklist.isRevoked(token)
+                if (userId != null && jwtUtil.getScope(token) == null
+                        && !jwtUtil.isExpired(token) && !tokenBlacklist.isRevoked(token)
                         && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                     var userDetails = org.springframework.security.core.userdetails.User

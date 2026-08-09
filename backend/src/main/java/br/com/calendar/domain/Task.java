@@ -1,4 +1,4 @@
-package br.com.calendar.task;
+package br.com.calendar.domain;
 
 import br.com.calendar.common.BaseEntity;
 import br.com.calendar.category.Category;
