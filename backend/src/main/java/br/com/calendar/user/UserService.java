@@ -5,6 +5,7 @@ import br.com.calendar.user.dto.ChangePasswordDTO;
 import br.com.calendar.user.dto.ConfirmEmailDTO;
 import br.com.calendar.user.dto.CreateUserDTO;
 import br.com.calendar.user.dto.OtpResponseDTO;
+import br.com.calendar.user.dto.ResetPasswordDTO;
 import br.com.calendar.user.dto.UpdateUserDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
 import lombok.RequiredArgsConstructor;
@@ -113,6 +114,29 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(dto.newPassword()));
+        userRepository.save(user);
+    }
+
+    public void resetPassword(ResetPasswordDTO dto) {
+        User user = userRepository.findByOtp(dto.otp())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid OTP"));
+
+        if (user.getOtpExpiration() == null || user.getOtpExpiration().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP expired");
+        }
+
+        if (!user.getOtp().equals(dto.otp())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid OTP");
+        }
+
+        if (!dto.password().equals(dto.passwordConfirmation())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
+        }
+
+        user.setPassword(passwordEncoder.encode(dto.password()));
+        user.setOtp(null);
+        user.setOtpExpiration(null);
+
         userRepository.save(user);
     }
 

@@ -3,6 +3,7 @@ package br.com.calendar.auth;
 import br.com.calendar.auth.dto.AuthResponse;
 import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
+import br.com.calendar.auth.dto.ResetPasswordRequest;
 import br.com.calendar.auth.dto.SignupRequest;
 import br.com.calendar.auth.dto.VerifyOtpRequest;
 import br.com.calendar.auth.dto.VerifyOtpResponse;
@@ -124,5 +125,11 @@ public class AuthService {
 
         tokenBlacklist.cleanExpired();
         tokenBlacklist.revoke(token);
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        br.com.calendar.user.dto.ResetPasswordDTO dto = new br.com.calendar.user.dto.ResetPasswordDTO(
+                request.otp(), request.password(), request.passwordConfirmation());
+        userService.resetPassword(dto);
     }
 }
