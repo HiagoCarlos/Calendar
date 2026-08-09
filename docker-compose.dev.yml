@@ -62,8 +62,29 @@ services:
     networks:
       - calendar-net
 
+  test-db:
+    image: postgres:16-alpine
+    container_name: calendar-db-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-calendar}
+      POSTGRES_USER: ${POSTGRES_USER:-calendar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-calendar}
+    ports:
+      - "5433:5432"
+    volumes:
+      - calendar-db-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-calendar}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - calendar-net
+
 volumes:
   calendar-db-dev-data:
+  calendar-db-test-data:
   backend-maven-cache:
   frontend-node-modules:
 
