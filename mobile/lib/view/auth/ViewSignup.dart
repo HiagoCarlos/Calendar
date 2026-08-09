@@ -1,6 +1,8 @@
+import 'package:calendar/view/auth/ViewLogin.dart';
 import 'package:calendar/widget/WidgetBody.dart';
 import 'package:calendar/widget/WidgetButton.dart';
 import 'package:calendar/widget/WidgetInput.dart';
+import 'package:calendar/widget/WidgetOAuth.dart';
 import 'package:calendar/widget/WidgetOAuthButton.dart';
 import 'package:flutter/material.dart';
 
@@ -114,57 +116,23 @@ class _ViewSignup extends State<ViewSignup> {
             
             WidgetButton(text: "Criar conta"),
 
-            Row(
-              children: [
-                Expanded(child: Divider()),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    "OU REGISTRE-SE COM",
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
+            WidgetOAuth("OU REGISTRE-SE COM"),
+            
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ViewLogin(),
                   ),
-                ),
-                Expanded(child: Divider()),
-              ],
-            ),
-            SizedBox(height: 15),
-            Row(
-              children: [
-                Expanded(
-                  child: WidgetOAuthButton(
-                    text: "Google",
-                    icon: Icons.g_mobiledata
-                  ),
-                ),
-
-                SizedBox(height: 10, width: 12),
-                Expanded(
-                  child: WidgetOAuthButton(
-                    text: "GitHub",
-                    icon: Icons.code
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 15),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text("Já tem uma conta?"),
-                TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    "Entrar",
-                    style: TextStyle(
-                      color: Colors.blue.shade900,
-                      fontWeight: FontWeight(700),
-                    ),
-                  ),
-                ),
-              ],
+                );
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("Já tem uma conta? Entrar"),
+                ],
+              ),
             ),
             SizedBox(height: 15),
             Center(
