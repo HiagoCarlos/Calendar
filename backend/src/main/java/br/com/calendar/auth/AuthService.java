@@ -4,6 +4,8 @@ import br.com.calendar.auth.dto.AuthResponse;
 import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.SignupRequest;
+import br.com.calendar.auth.dto.VerifyOtpRequest;
+import br.com.calendar.auth.dto.VerifyOtpResponse;
 import br.com.calendar.common.dto.MessageResponse;
 import br.com.calendar.user.User;
 import br.com.calendar.user.UserRepository;
@@ -18,6 +20,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.LocalDateTime;
 @Slf4j
 @Service
 public class AuthService {
@@ -68,6 +73,34 @@ public class AuthService {
         );
 
         return new MessageResponse("If the email is registered, password reset instructions will be sent.");
+    }
+
+    public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(AuthService::invalidOtp);
+
+        if (!isOtpValid(user, request.otp())) {
+            throw invalidOtp();
+        }
+        user.setOtp(null);
+        user.setOtpExpiration(null);
+        userRepository.save(user);
+
+        return new VerifyOtpResponse(
+                jwtUtil.generatePasswordResetToken(user.getId()),
+                jwtUtil.getResetExpirationMs() / 1000);
+    }
+
+    private static boolean isOtpValid(User user, String otp) {
+        return user.getOtp() != null
+                && user.getOtpExpiration() != null
+                && user.getOtpExpiration().isAfter(LocalDateTime.now())
+                && MessageDigest.isEqual(user.getOtp().getBytes(StandardCharsets.UTF_8),
+                                         otp.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static ResponseStatusException invalidOtp() {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired code");
     }
 
     public UserSummaryDTO me(String userId) {

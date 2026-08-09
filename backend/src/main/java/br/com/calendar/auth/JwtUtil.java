@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -15,13 +16,22 @@ import java.util.UUID;
 @Component
 public class JwtUtil {
 
+    public static final String SCOPE_PASSWORD_RESET = "password_reset";
+
+    private static final String SCOPE_CLAIM = "scope";
+
     private final SecretKey key;
+    @Getter
     private final long expirationMs;
+    @Getter
+    private final long resetExpirationMs;
 
     public JwtUtil(@Value("${jwt.secret}") String secret,
-                   @Value("${jwt.expiration-ms}") long expirationMs) {
+                   @Value("${jwt.expiration-ms}") long expirationMs,
+                   @Value("${jwt.reset-expiration-ms}") long resetExpirationMs) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
+        this.resetExpirationMs = resetExpirationMs;
     }
 
     public String generateToken(String userId) {
@@ -33,6 +43,22 @@ public class JwtUtil {
                 .expiration(new Date(now.getTime() + expirationMs))
                 .signWith(key)
                 .compact();
+    }
+
+    public String generatePasswordResetToken(String userId) {
+        Date now = new Date();
+        return Jwts.builder()
+                .id(UUID.randomUUID().toString())
+                .subject(userId)
+                .claim(SCOPE_CLAIM, SCOPE_PASSWORD_RESET)
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + resetExpirationMs))
+                .signWith(key)
+                .compact();
+    }
+
+    public String getScope(String token) {
+        return parseClaims(token).get(SCOPE_CLAIM, String.class);
     }
 
     public String extractUserId(String token) {
@@ -49,10 +75,6 @@ public class JwtUtil {
         } catch (ExpiredJwtException ex) {
             return true;
         }
-    }
-
-    public long getExpirationMs() {
-        return expirationMs;
     }
 
     private Claims parseClaims(String token) {

@@ -4,6 +4,8 @@ import br.com.calendar.auth.dto.AuthResponse;
 import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.SignupRequest;
+import br.com.calendar.auth.dto.VerifyOtpRequest;
+import br.com.calendar.auth.dto.VerifyOtpResponse;
 import br.com.calendar.common.dto.MessageResponse;
 import br.com.calendar.user.User;
 import br.com.calendar.user.UserRepository;
@@ -22,10 +24,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -140,6 +144,81 @@ class AuthServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> authService.login(new LoginRequest("unknown@example.com", "any-password")));
+    }
+
+    @Test
+    void verifyOtpWithValidCodeReturnsResetTokenAndBurnsTheOtp() {
+        User user = userWithOtp("123456", LocalDateTime.now().plusMinutes(5));
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+        when(jwtUtil.generatePasswordResetToken(USER_ID)).thenReturn("reset-token");
+        when(jwtUtil.getResetExpirationMs()).thenReturn(300000L);
+
+        VerifyOtpResponse response = authService.verifyOtp(
+                new VerifyOtpRequest("test@example.com", "123456"));
+
+        assertEquals("reset-token", response.resetToken());
+        assertEquals(300, response.expiresIn());
+        assertNull(user.getOtp());
+        assertNull(user.getOtpExpiration());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void verifyOtpWithWrongCodeThrows() {
+        User user = userWithOtp("123456", LocalDateTime.now().plusMinutes(5));
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+
+        assertThrows(ResponseStatusException.class, () -> authService.verifyOtp(
+                new VerifyOtpRequest("test@example.com", "999999")));
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void verifyOtpWithExpiredCodeThrows() {
+        User user = userWithOtp("123456", LocalDateTime.now().minusMinutes(1));
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+
+        assertThrows(ResponseStatusException.class, () -> authService.verifyOtp(
+                new VerifyOtpRequest("test@example.com", "123456")));
+    }
+
+    @Test
+    void verifyOtpWithAlreadyUsedCodeThrows() {
+        User user = userWithOtp(null, null);
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+
+        assertThrows(ResponseStatusException.class, () -> authService.verifyOtp(
+                new VerifyOtpRequest("test@example.com", "123456")));
+    }
+
+    @Test
+    void verifyOtpWithUnknownEmailThrowsTheSameErrorAsAWrongCode() {
+        User user = userWithOtp("123456", LocalDateTime.now().plusMinutes(5));
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        ResponseStatusException unknownEmail = assertThrows(ResponseStatusException.class,
+                () -> authService.verifyOtp(new VerifyOtpRequest("unknown@example.com", "123456")));
+        ResponseStatusException wrongCode = assertThrows(ResponseStatusException.class,
+                () -> authService.verifyOtp(new VerifyOtpRequest("test@example.com", "999999")));
+
+        // identical status and message, otherwise the route leaks which emails are registered
+        assertEquals(wrongCode.getStatusCode(), unknownEmail.getStatusCode());
+        assertEquals(wrongCode.getReason(), unknownEmail.getReason());
+    }
+
+    private static User userWithOtp(String otp, LocalDateTime expiration) {
+        User user = new User();
+        user.setId(USER_ID);
+        user.setEmail("test@example.com");
+        user.setOtp(otp);
+        user.setOtpExpiration(expiration);
+        return user;
     }
 
     @Test
