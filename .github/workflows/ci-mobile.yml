@@ -1,20 +1,20 @@
-name: CI - Frontend
+name: CI - Mobile
 
 on:
   push:
     branches: [main, development]
     paths:
-      - "frontend/**"
-      - ".github/workflows/ci-frontend.yml"
+      - "mobile/**"
+      - ".github/workflows/ci-mobile.yml"
   pull_request:
     branches: [main, development]
     paths:
-      - "frontend/**"
-      - ".github/workflows/ci-frontend.yml"
+      - "mobile/**"
+      - ".github/workflows/ci-mobile.yml"
 
 defaults:
   run:
-    working-directory: frontend
+    working-directory: mobile
 
 jobs:
   build-and-test:
@@ -24,22 +24,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Configure Node.js
-        uses: actions/setup-node@v7
+      - name: Configure Flutter
+        uses: subosito/flutter-action@v2
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          flutter-version: "3.35.7"
+          channel: stable
+          cache: true
 
       - name: Install dependencies
-        run: npm ci
+        run: flutter pub get
 
-      # Verifica se os arquivos estão formatados corretamente.
-      - name: Check formatting
-        run: npx prettier --check "src/**/*.{ts,html,css}"
+      - name: Analyze code
+        run: flutter analyze
 
-      - name: Unit tests
-        run: npm test
+      - name: Run tests
+        run: flutter test
 
-      - name: Production build (SSR)
-        run: npm run build
+      - name: Build APK (debug)
+        run: flutter build apk --debug
