@@ -56,6 +56,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
+    @Operation(summary = "Get authenticated user")
     public ResponseEntity<UserSummaryDTO> me() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null) {
@@ -66,6 +67,7 @@ public class AuthController {
     }
 
     @PostMapping("/auth/logout")
+    @Operation(summary = "Logout user")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         String header = request.getHeader("Authorization");
         String token = null;
