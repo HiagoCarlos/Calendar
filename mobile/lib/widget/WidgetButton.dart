@@ -3,25 +3,23 @@ import 'package:flutter/material.dart';
 class WidgetButton extends StatefulWidget {
     const WidgetButton({
       super.key,
-      this.text=""
+      this.text = "",
+      this.onPressed,
     });
 
     final String text;
+    final VoidCallback? onPressed;
 
     @override
     _WidgetButton createState() => _WidgetButton();
 }
 
 class _WidgetButton extends State<WidgetButton> {
-
-    
-
     @override
     Widget build(BuildContext context) {
         return Column(
           children: [
             SizedBox(
-              //height: 57,
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -30,7 +28,7 @@ class _WidgetButton extends State<WidgetButton> {
                     borderRadius: BorderRadius.circular(06),
                   ),
                 ),
-                onPressed: () {},
+                onPressed: widget.onPressed ?? () {},
                 child: Text(
                   widget.text,
                   style: TextStyle(color: Colors.white, fontSize: 20),
