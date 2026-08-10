@@ -1,6 +1,7 @@
 package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
+import br.com.calendar.auth.dto.ConfirmEmailRequest;
 import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.ResetPasswordRequest;
@@ -8,6 +9,7 @@ import br.com.calendar.auth.dto.SignupRequest;
 import br.com.calendar.auth.dto.VerifyOtpRequest;
 import br.com.calendar.auth.dto.VerifyOtpResponse;
 import br.com.calendar.common.dto.MessageResponse;
+import br.com.calendar.email.EmailService;
 import br.com.calendar.user.User;
 import br.com.calendar.user.UserRepository;
 import br.com.calendar.user.UserService;
@@ -30,6 +32,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,11 +58,15 @@ class AuthServiceTest {
     @Mock
     private TokenBlacklist tokenBlacklist;
 
+    @Mock
+    private EmailService emailService;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, userService, passwordEncoder, jwtUtil, tokenBlacklist);
+        authService = new AuthService(userRepository, userService, passwordEncoder, jwtUtil, tokenBlacklist,
+                emailService, "http://localhost:4200");
     }
 
     @Test
@@ -67,6 +75,7 @@ class AuthServiceTest {
                 USER_ID, "Danillo", "test@example.com", false, Instant.now(), Instant.now());
 
         when(userService.createUser(any(CreateUserDTO.class))).thenReturn(created);
+        when(jwtUtil.generateEmailConfirmationToken(USER_ID)).thenReturn("confirmation-token");
         when(jwtUtil.generateToken(USER_ID)).thenReturn("jwt-token");
         when(jwtUtil.getExpirationMs()).thenReturn(86400000L);
 
@@ -75,6 +84,7 @@ class AuthServiceTest {
 
         assertEquals("jwt-token", response.accessToken());
         assertEquals("Bearer", response.tokenType());
+        verify(emailService).send(eq("test@example.com"), any(String.class), contains("confirmation-token"));
     }
 
     @Test
@@ -114,6 +124,7 @@ class AuthServiceTest {
 
         assertEquals("If the email is registered, password reset instructions will be sent.", messageResponse.message());
         verify(userService).generatePasswordResetOtp(user.getId());
+        verify(emailService).send(eq("test@example.com"), any(String.class), any(String.class));
     }
 
     @Test
@@ -329,5 +340,45 @@ class AuthServiceTest {
         assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
 
         verify(userService, never()).resetPassword(any(String.class), any(String.class));
+    }
+
+    @Test
+    void confirmEmailWithValidTokenMarksEmailConfirmed() {
+        ConfirmEmailRequest request = new ConfirmEmailRequest("confirmation-token");
+
+        when(tokenBlacklist.isRevoked("confirmation-token")).thenReturn(false);
+        when(jwtUtil.isExpired("confirmation-token")).thenReturn(false);
+        when(jwtUtil.getScope("confirmation-token")).thenReturn(JwtUtil.SCOPE_EMAIL_CONFIRMATION);
+        when(jwtUtil.extractUserId("confirmation-token")).thenReturn(USER_ID);
+
+        authService.confirmEmail(request);
+
+        verify(userService).markEmailConfirmed(USER_ID);
+        verify(tokenBlacklist, never()).revoke(any(String.class));
+    }
+
+    @Test
+    void confirmEmailWithPasswordResetScopeTokenThrows() {
+        ConfirmEmailRequest request = new ConfirmEmailRequest("reset-token");
+
+        when(tokenBlacklist.isRevoked("reset-token")).thenReturn(false);
+        when(jwtUtil.isExpired("reset-token")).thenReturn(false);
+        when(jwtUtil.getScope("reset-token")).thenReturn(JwtUtil.SCOPE_PASSWORD_RESET);
+
+        assertThrows(ResponseStatusException.class, () -> authService.confirmEmail(request));
+
+        verify(userService, never()).markEmailConfirmed(any(String.class));
+    }
+
+    @Test
+    void confirmEmailWithExpiredTokenThrows() {
+        ConfirmEmailRequest request = new ConfirmEmailRequest("confirmation-token");
+
+        when(tokenBlacklist.isRevoked("confirmation-token")).thenReturn(false);
+        when(jwtUtil.isExpired("confirmation-token")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class, () -> authService.confirmEmail(request));
+
+        verify(userService, never()).markEmailConfirmed(any(String.class));
     }
 }

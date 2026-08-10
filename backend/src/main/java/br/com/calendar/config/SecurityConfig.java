@@ -35,7 +35,8 @@ public class SecurityConfig {
                                 response.sendError(401, "Unauthorized")))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/signup",
-                                "/auth/forgot-password", "/auth/verify-otp", "/auth/reset-password").permitAll()
+                                "/auth/forgot-password", "/auth/verify-otp", "/auth/reset-password",
+                                "/auth/confirm-email").permitAll()
                         .requestMatchers("/health").permitAll()
                         .requestMatchers(swaggerPaths).permitAll()
                         .anyRequest().authenticated())

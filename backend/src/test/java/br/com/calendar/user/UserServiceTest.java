@@ -2,7 +2,6 @@ package br.com.calendar.user;
 
 import br.com.calendar.configuration.ConfigurationService;
 import br.com.calendar.user.dto.ChangePasswordDTO;
-import br.com.calendar.user.dto.ConfirmEmailDTO;
 import br.com.calendar.user.dto.CreateUserDTO;
 import br.com.calendar.user.dto.OtpResponseDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
@@ -19,7 +18,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -84,21 +82,7 @@ class UserServiceTest {
     }
 
     @Test
-    void generateEmailConfirmationOtpSetsOnlyTheEmailConfirmationFields() {
-        User user = new User();
-        user.setId(USER_ID);
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-
-        OtpResponseDTO response = userService.generateEmailConfirmationOtp(USER_ID);
-
-        assertEquals(user.getEmailConfirmationOtp(), response.otp());
-        assertTrue(user.getEmailConfirmationOtpExpiration().isAfter(LocalDateTime.now()));
-        assertNull(user.getOtp());
-        assertNull(user.getOtpExpiration());
-    }
-
-    @Test
-    void generatePasswordResetOtpSetsOnlyThePasswordResetFields() {
+    void generatePasswordResetOtpSetsThePasswordResetFields() {
         User user = new User();
         user.setId(USER_ID);
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
@@ -107,81 +91,18 @@ class UserServiceTest {
 
         assertEquals(user.getOtp(), response.otp());
         assertTrue(user.getOtpExpiration().isAfter(LocalDateTime.now()));
-        assertNull(user.getEmailConfirmationOtp());
-        assertNull(user.getEmailConfirmationOtpExpiration());
     }
 
     @Test
-    void confirmEmailWithValidCodeSucceeds() {
+    void markEmailConfirmedSetsTheFlagAndSaves() {
         User user = new User();
         user.setId(USER_ID);
-        user.setEmailConfirmationOtp("123456");
-        user.setEmailConfirmationOtpExpiration(LocalDateTime.now().plusMinutes(5));
-
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-        when(userRepository.save(user)).thenReturn(user);
-        when(userMapper.toResponse(user)).thenReturn(
-                new UserResponseDTO(USER_ID, null, null, true, null, null));
 
-        UserResponseDTO response = userService.confirmEmail(USER_ID, new ConfirmEmailDTO("123456"));
+        userService.markEmailConfirmed(USER_ID);
 
-        assertTrue(response.emailConfirmed());
         assertTrue(user.isEmailConfirmed());
-        assertNull(user.getEmailConfirmationOtp());
-        assertNull(user.getEmailConfirmationOtpExpiration());
-    }
-
-    @Test
-    void confirmEmailWithoutRequestedCodeThrows() {
-        User user = new User();
-        user.setId(USER_ID);
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-
-        assertThrows(ResponseStatusException.class,
-                () -> userService.confirmEmail(USER_ID, new ConfirmEmailDTO("123456")));
-    }
-
-    @Test
-    void confirmEmailWithExpiredCodeThrows() {
-        User user = new User();
-        user.setId(USER_ID);
-        user.setEmailConfirmationOtp("123456");
-        user.setEmailConfirmationOtpExpiration(LocalDateTime.now().minusMinutes(1));
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-
-        assertThrows(ResponseStatusException.class,
-                () -> userService.confirmEmail(USER_ID, new ConfirmEmailDTO("123456")));
-    }
-
-    @Test
-    void confirmEmailWithWrongCodeThrows() {
-        User user = new User();
-        user.setId(USER_ID);
-        user.setEmailConfirmationOtp("123456");
-        user.setEmailConfirmationOtpExpiration(LocalDateTime.now().plusMinutes(5));
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-
-        assertThrows(ResponseStatusException.class,
-                () -> userService.confirmEmail(USER_ID, new ConfirmEmailDTO("999999")));
-    }
-
-    @Test
-    void confirmEmailDoesNotTouchThePasswordResetFields() {
-        User user = new User();
-        user.setId(USER_ID);
-        user.setEmailConfirmationOtp("123456");
-        user.setEmailConfirmationOtpExpiration(LocalDateTime.now().plusMinutes(5));
-        user.setOtp("654321");
-        user.setOtpExpiration(LocalDateTime.now().plusMinutes(15));
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-        when(userRepository.save(user)).thenReturn(user);
-        when(userMapper.toResponse(user)).thenReturn(
-                new UserResponseDTO(USER_ID, null, null, true, null, null));
-
-        userService.confirmEmail(USER_ID, new ConfirmEmailDTO("123456"));
-
-        assertEquals("654321", user.getOtp());
-        assertTrue(user.getOtpExpiration().isAfter(LocalDateTime.now()));
+        verify(userRepository).save(user);
     }
 
     @Test

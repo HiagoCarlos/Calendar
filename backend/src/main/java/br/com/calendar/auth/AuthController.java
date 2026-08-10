@@ -1,6 +1,7 @@
 package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
+import br.com.calendar.auth.dto.ConfirmEmailRequest;
 import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.ResetPasswordRequest;
@@ -83,6 +84,13 @@ public class AuthController {
     @PostMapping("/auth/reset-password")
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Confirm email using the token from the confirmation link")
+    @PostMapping("/auth/confirm-email")
+    public ResponseEntity<Void> confirmEmail(@Valid @RequestBody ConfirmEmailRequest request) {
+        authService.confirmEmail(request);
         return ResponseEntity.ok().build();
     }
 }

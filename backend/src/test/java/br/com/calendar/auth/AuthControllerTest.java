@@ -1,6 +1,7 @@
 package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
+import br.com.calendar.auth.dto.ConfirmEmailRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.ResetPasswordRequest;
 import br.com.calendar.auth.dto.SignupRequest;
@@ -22,6 +23,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -42,6 +45,9 @@ class AuthControllerTest {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     private static final String NAME = "Test User";
     private static final String EMAIL = "test-auth@example.com";
@@ -248,6 +254,48 @@ class AuthControllerTest {
         mockMvc.perform(post("/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void confirmEmailWithValidTokenMarksEmailConfirmed() throws Exception {
+        String email = "confirm-" + System.currentTimeMillis() + "@example.com";
+        authService.signup(new SignupRequest("Confirm User", email, PASSWORD));
+        UserResponseDTO user = userService.getUserByEmail(email);
+        assertFalse(user.emailConfirmed());
+
+        String token = jwtUtil.generateEmailConfirmationToken(user.id());
+
+        mockMvc.perform(post("/auth/confirm-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ConfirmEmailRequest(token))))
+                .andExpect(status().isOk());
+
+        assertTrue(userService.getUserByEmail(email).emailConfirmed());
+    }
+
+    @Test
+    void confirmEmailWithAccessTokenInsteadOfConfirmationTokenReturns400() throws Exception {
+        LoginRequest loginRequest = new LoginRequest(EMAIL, PASSWORD);
+        MvcResult result = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+        AuthResponse authResponse = objectMapper.readValue(
+                result.getResponse().getContentAsString(), AuthResponse.class);
+
+        mockMvc.perform(post("/auth/confirm-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ConfirmEmailRequest(authResponse.accessToken()))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void confirmEmailWithBlankTokenReturns400() throws Exception {
+        mockMvc.perform(post("/auth/confirm-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ConfirmEmailRequest(""))))
                 .andExpect(status().isBadRequest());
     }
 

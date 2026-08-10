@@ -17,6 +17,7 @@ import java.util.UUID;
 public class JwtUtil {
 
     public static final String SCOPE_PASSWORD_RESET = "password_reset";
+    public static final String SCOPE_EMAIL_CONFIRMATION = "email_confirmation";
 
     private static final String SCOPE_CLAIM = "scope";
 
@@ -25,13 +26,17 @@ public class JwtUtil {
     private final long expirationMs;
     @Getter
     private final long resetExpirationMs;
+    @Getter
+    private final long emailConfirmationExpirationMs;
 
     public JwtUtil(@Value("${jwt.secret}") String secret,
                    @Value("${jwt.expiration-ms}") long expirationMs,
-                   @Value("${jwt.reset-expiration-ms}") long resetExpirationMs) {
+                   @Value("${jwt.reset-expiration-ms}") long resetExpirationMs,
+                   @Value("${jwt.email-confirmation-expiration-ms}") long emailConfirmationExpirationMs) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
         this.resetExpirationMs = resetExpirationMs;
+        this.emailConfirmationExpirationMs = emailConfirmationExpirationMs;
     }
 
     public String generateToken(String userId) {
@@ -46,13 +51,21 @@ public class JwtUtil {
     }
 
     public String generatePasswordResetToken(String userId) {
+        return generateScopedToken(userId, SCOPE_PASSWORD_RESET, resetExpirationMs);
+    }
+
+    public String generateEmailConfirmationToken(String userId) {
+        return generateScopedToken(userId, SCOPE_EMAIL_CONFIRMATION, emailConfirmationExpirationMs);
+    }
+
+    private String generateScopedToken(String userId, String scope, long expirationMs) {
         Date now = new Date();
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
                 .subject(userId)
-                .claim(SCOPE_CLAIM, SCOPE_PASSWORD_RESET)
+                .claim(SCOPE_CLAIM, scope)
                 .issuedAt(now)
-                .expiration(new Date(now.getTime() + resetExpirationMs))
+                .expiration(new Date(now.getTime() + expirationMs))
                 .signWith(key)
                 .compact();
     }
