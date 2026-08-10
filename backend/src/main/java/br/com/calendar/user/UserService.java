@@ -6,7 +6,6 @@ import br.com.calendar.user.dto.CreateUserDTO;
 import br.com.calendar.user.dto.OtpResponseDTO;
 import br.com.calendar.user.dto.UpdateUserDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,7 +15,6 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
     private static final long OTP_VALIDITY_MINUTES = 15;
@@ -25,6 +23,14 @@ public class UserService {
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final ConfigurationService configurationService;
+
+    public UserService(UserRepository userRepository, UserMapper userMapper,
+                        PasswordEncoder passwordEncoder, ConfigurationService configurationService) {
+        this.userRepository = userRepository;
+        this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
+        this.configurationService = configurationService;
+    }
 
     public UserResponseDTO createUser(CreateUserDTO dto) {
         if (userRepository.findByEmail(dto.email()).isPresent()) {
