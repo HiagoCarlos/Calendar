@@ -5,7 +5,6 @@ import br.com.calendar.user.dto.ChangePasswordDTO;
 import br.com.calendar.user.dto.ConfirmEmailDTO;
 import br.com.calendar.user.dto.CreateUserDTO;
 import br.com.calendar.user.dto.OtpResponseDTO;
-import br.com.calendar.user.dto.ResetPasswordDTO;
 import br.com.calendar.user.dto.UpdateUserDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
@@ -74,8 +75,8 @@ public class UserService {
         User user = findUserOrThrow(id);
 
         String otp = generateOtp();
-        user.setOtp(otp);
-        user.setOtpExpiration(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES));
+        user.setEmailConfirmationOtp(otp);
+        user.setEmailConfirmationOtpExpiration(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES));
         userRepository.save(user);
 
         // TODO: send this via email once an email service exists. Returning it
@@ -83,24 +84,37 @@ public class UserService {
         return new OtpResponseDTO(otp);
     }
 
+    public OtpResponseDTO generatePasswordResetOtp(String id) {
+        User user = findUserOrThrow(id);
+
+        String otp = generateOtp();
+        user.setOtp(otp);
+        user.setOtpExpiration(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES));
+        userRepository.save(user);
+
+        // TODO: send this via email once an email service exists. Returning it
+        // directly for now so the forgot-password flow can be tested manually.
+        return new OtpResponseDTO(otp);
+    }
+
     public UserResponseDTO confirmEmail(String id, ConfirmEmailDTO dto) {
         User user = findUserOrThrow(id);
 
-        if (user.getOtp() == null || user.getOtpExpiration() == null) {
+        if (user.getEmailConfirmationOtp() == null || user.getEmailConfirmationOtpExpiration() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No confirmation code was requested");
         }
 
-        if (user.getOtpExpiration().isBefore(LocalDateTime.now())) {
+        if (user.getEmailConfirmationOtpExpiration().isBefore(LocalDateTime.now())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Confirmation code expired");
         }
 
-        if (!user.getOtp().equals(dto.otp())) {
+        if (!constantTimeEquals(user.getEmailConfirmationOtp(), dto.otp())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid confirmation code");
         }
 
         user.setEmailConfirmed(true);
-        user.setOtp(null);
-        user.setOtpExpiration(null);
+        user.setEmailConfirmationOtp(null);
+        user.setEmailConfirmationOtpExpiration(null);
 
         User savedUser = userRepository.save(user);
         return userMapper.toResponse(savedUser);
@@ -117,27 +131,16 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public void resetPassword(ResetPasswordDTO dto) {
-        User user = userRepository.findByOtp(dto.otp())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid OTP"));
-
-        if (user.getOtpExpiration() == null || user.getOtpExpiration().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP expired");
-        }
-
-        if (!user.getOtp().equals(dto.otp())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid OTP");
-        }
-
-        if (!dto.password().equals(dto.passwordConfirmation())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
-        }
-
-        user.setPassword(passwordEncoder.encode(dto.password()));
-        user.setOtp(null);
-        user.setOtpExpiration(null);
-
+    // The caller (AuthService) is responsible for identifying and authorizing
+    // which user this is via the password-reset JWT before calling this.
+    public void resetPassword(String id, String newPassword) {
+        User user = findUserOrThrow(id);
+        user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+
+    private static boolean constantTimeEquals(String a, String b) {
+        return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
     }
 
     private User findUserOrThrow(String id) {

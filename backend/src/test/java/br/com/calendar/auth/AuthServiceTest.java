@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -106,7 +105,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.of(user));
 
         SecureRandom random = new SecureRandom();
-        when(userService.generateEmailConfirmationOtp(any(String.class)))
+        when(userService.generatePasswordResetOtp(any(String.class)))
                 .thenReturn(
                         new OtpResponseDTO(String.format("%06d", random.nextInt(1_000_000)))
                 );
@@ -114,7 +113,7 @@ class AuthServiceTest {
         MessageResponse messageResponse = authService.requestPasswordReset(new ForgotPasswordRequest("test@example.com"));
 
         assertEquals("If the email is registered, password reset instructions will be sent.", messageResponse.message());
-        verify(userService).generateEmailConfirmationOtp(user.getId());
+        verify(userService).generatePasswordResetOtp(user.getId());
     }
 
     @Test
@@ -260,21 +259,75 @@ class AuthServiceTest {
     }
 
     @Test
-    void resetPasswordWithValidOtpSucceeds() {
-        ResetPasswordRequest request = new ResetPasswordRequest("123456", "newPassword123", "newPassword123");
+    void resetPasswordWithValidResetTokenSucceeds() {
+        ResetPasswordRequest request = new ResetPasswordRequest("reset-token", "newPassword123", "newPassword123");
+
+        when(tokenBlacklist.isRevoked("reset-token")).thenReturn(false);
+        when(jwtUtil.isExpired("reset-token")).thenReturn(false);
+        when(jwtUtil.getScope("reset-token")).thenReturn(JwtUtil.SCOPE_PASSWORD_RESET);
+        when(jwtUtil.extractUserId("reset-token")).thenReturn(USER_ID);
 
         authService.resetPassword(request);
 
-        verify(userService).resetPassword(any(br.com.calendar.user.dto.ResetPasswordDTO.class));
+        verify(userService).resetPassword(USER_ID, "newPassword123");
+        verify(tokenBlacklist).revoke("reset-token");
     }
 
     @Test
     void resetPasswordWithMismatchedPasswordsThrows() {
-        ResetPasswordRequest request = new ResetPasswordRequest("123456", "newPassword123", "differentPassword");
-
-        org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match"))
-                .when(userService).resetPassword(any(br.com.calendar.user.dto.ResetPasswordDTO.class));
+        ResetPasswordRequest request = new ResetPasswordRequest("reset-token", "newPassword123", "differentPassword");
 
         assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
+
+        verify(userService, never()).resetPassword(any(String.class), any(String.class));
+    }
+
+    @Test
+    void resetPasswordWithNonResetScopeTokenThrows() {
+        ResetPasswordRequest request = new ResetPasswordRequest("access-token", "newPassword123", "newPassword123");
+
+        when(tokenBlacklist.isRevoked("access-token")).thenReturn(false);
+        when(jwtUtil.isExpired("access-token")).thenReturn(false);
+        when(jwtUtil.getScope("access-token")).thenReturn(null);
+
+        assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
+
+        verify(userService, never()).resetPassword(any(String.class), any(String.class));
+    }
+
+    @Test
+    void resetPasswordWithExpiredResetTokenThrows() {
+        ResetPasswordRequest request = new ResetPasswordRequest("reset-token", "newPassword123", "newPassword123");
+
+        when(tokenBlacklist.isRevoked("reset-token")).thenReturn(false);
+        when(jwtUtil.isExpired("reset-token")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
+
+        verify(userService, never()).resetPassword(any(String.class), any(String.class));
+    }
+
+    @Test
+    void resetPasswordWithAlreadyUsedResetTokenThrows() {
+        ResetPasswordRequest request = new ResetPasswordRequest("reset-token", "newPassword123", "newPassword123");
+
+        when(tokenBlacklist.isRevoked("reset-token")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
+
+        verify(userService, never()).resetPassword(any(String.class), any(String.class));
+    }
+
+    @Test
+    void resetPasswordWithMalformedResetTokenThrows() {
+        ResetPasswordRequest request = new ResetPasswordRequest("not-a-real-jwt", "newPassword123", "newPassword123");
+
+        when(tokenBlacklist.isRevoked("not-a-real-jwt")).thenReturn(false);
+        when(jwtUtil.isExpired("not-a-real-jwt"))
+                .thenThrow(new io.jsonwebtoken.MalformedJwtException("Invalid JWT"));
+
+        assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
+
+        verify(userService, never()).resetPassword(any(String.class), any(String.class));
     }
 }

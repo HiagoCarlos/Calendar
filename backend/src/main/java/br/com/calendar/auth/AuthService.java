@@ -66,7 +66,7 @@ public class AuthService {
         userRepository.findByEmail(request.email())
                 .ifPresent(
                         user -> {
-                            OtpResponseDTO otpResponseDTO = userService.generateEmailConfirmationOtp(user.getId());
+                            OtpResponseDTO otpResponseDTO = userService.generatePasswordResetOtp(user.getId());
 
                             // Email added to the log message for identification during the test.
                             log.info("Generated OTP for email: {} - Code: {}", user.getEmail(), otpResponseDTO.otp());
@@ -128,8 +128,34 @@ public class AuthService {
     }
 
     public void resetPassword(ResetPasswordRequest request) {
-        br.com.calendar.user.dto.ResetPasswordDTO dto = new br.com.calendar.user.dto.ResetPasswordDTO(
-                request.otp(), request.password(), request.passwordConfirmation());
-        userService.resetPassword(dto);
+        if (!request.password().equals(request.passwordConfirmation())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
+        }
+
+        String resetToken = request.resetToken();
+        String userId = extractPasswordResetUserId(resetToken);
+
+        userService.resetPassword(userId, request.password());
+        tokenBlacklist.revoke(resetToken);
+    }
+
+    private String extractPasswordResetUserId(String resetToken) {
+        try {
+            boolean invalid = tokenBlacklist.isRevoked(resetToken)
+                    || jwtUtil.isExpired(resetToken)
+                    || !JwtUtil.SCOPE_PASSWORD_RESET.equals(jwtUtil.getScope(resetToken));
+            if (invalid) {
+                throw invalidResetToken();
+            }
+            return jwtUtil.extractUserId(resetToken);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw invalidResetToken();
+        }
+    }
+
+    private static ResponseStatusException invalidResetToken() {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token");
     }
 }
