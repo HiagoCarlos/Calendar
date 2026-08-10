@@ -111,7 +111,7 @@ class AuthControllerTest {
                 result.getResponse().getContentAsString(), AuthResponse.class);
         String token = authResponse.accessToken();
 
-        mockMvc.perform(get("/me")
+        mockMvc.perform(get("/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", notNullValue()))
@@ -120,7 +120,7 @@ class AuthControllerTest {
 
     @Test
     void meWithoutTokenReturns401() throws Exception {
-        mockMvc.perform(get("/me"))
+        mockMvc.perform(get("/auth/me"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -163,7 +163,7 @@ class AuthControllerTest {
                 .andExpect(status().isNoContent());
 
         // try to use the revoked token
-        mockMvc.perform(get("/me")
+        mockMvc.perform(get("/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized());
     }
