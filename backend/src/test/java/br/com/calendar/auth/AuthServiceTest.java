@@ -61,12 +61,15 @@ class AuthServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private RateLimiter rateLimiter;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
         authService = new AuthService(userRepository, userService, passwordEncoder, jwtUtil, tokenBlacklist,
-                emailService, "http://localhost:4200");
+                emailService, rateLimiter, "http://localhost:4200");
     }
 
     @Test
@@ -103,6 +106,17 @@ class AuthServiceTest {
 
         assertEquals("jwt-token", response.accessToken());
         assertEquals("Bearer", response.tokenType());
+        verify(rateLimiter, never()).recordAttempt(any(String.class));
+    }
+
+    @Test
+    void loginWithTooManyAttemptsThrows() {
+        when(rateLimiter.isBlocked("login:test@example.com")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class,
+                () -> authService.login(new LoginRequest("test@example.com", "plain-password")));
+
+        verify(userRepository, never()).findByEmail(any(String.class));
     }
 
     @Test
@@ -137,6 +151,16 @@ class AuthServiceTest {
     }
 
     @Test
+    void requestPasswordResetWithTooManyAttemptsThrows() {
+        when(rateLimiter.isBlocked("forgot-password:test@example.com")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class,
+                () -> authService.requestPasswordReset(new ForgotPasswordRequest("test@example.com")));
+
+        verify(userRepository, never()).findByEmail(any(String.class));
+    }
+
+    @Test
     void loginWithWrongPasswordThrows() {
         User user = new User();
         user.setId(USER_ID);
@@ -148,6 +172,8 @@ class AuthServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> authService.login(new LoginRequest("test@example.com", "wrong-password")));
+
+        verify(rateLimiter).recordAttempt("login:test@example.com");
     }
 
     @Test
@@ -156,6 +182,8 @@ class AuthServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> authService.login(new LoginRequest("unknown@example.com", "any-password")));
+
+        verify(rateLimiter).recordAttempt("login:unknown@example.com");
     }
 
     @Test
@@ -174,6 +202,17 @@ class AuthServiceTest {
         assertNull(user.getOtp());
         assertNull(user.getOtpExpiration());
         verify(userRepository).save(user);
+        verify(rateLimiter, never()).recordAttempt(any(String.class));
+    }
+
+    @Test
+    void verifyOtpWithTooManyAttemptsThrows() {
+        when(rateLimiter.isBlocked("verify-otp:test@example.com")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class, () -> authService.verifyOtp(
+                new VerifyOtpRequest("test@example.com", "123456")));
+
+        verify(userRepository, never()).findByEmail(any(String.class));
     }
 
     @Test
@@ -185,6 +224,7 @@ class AuthServiceTest {
         assertThrows(ResponseStatusException.class, () -> authService.verifyOtp(
                 new VerifyOtpRequest("test@example.com", "999999")));
         verify(userRepository, never()).save(any(User.class));
+        verify(rateLimiter).recordAttempt("verify-otp:test@example.com");
     }
 
     @Test

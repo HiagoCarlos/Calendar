@@ -27,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.util.Optional;
 @Slf4j
 @Service
 public class AuthService {
@@ -37,17 +38,20 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final TokenBlacklist tokenBlacklist;
     private final EmailService emailService;
+    private final RateLimiter rateLimiter;
     private final String frontendUrl;
 
     public AuthService(UserRepository userRepository, UserService userService,
                        PasswordEncoder passwordEncoder, JwtUtil jwtUtil, TokenBlacklist tokenBlacklist,
-                       EmailService emailService, @Value("${app.frontend-url}") String frontendUrl) {
+                       EmailService emailService, RateLimiter rateLimiter,
+                       @Value("${app.frontend-url}") String frontendUrl) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.tokenBlacklist = tokenBlacklist;
         this.emailService = emailService;
+        this.rateLimiter = rateLimiter;
         this.frontendUrl = frontendUrl;
     }
 
@@ -66,18 +70,30 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
+        String rateLimitKey = rateLimitKey("login", request.email());
+        ensureNotRateLimited(rateLimitKey);
 
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+        Optional<User> user = userRepository.findByEmail(request.email());
+        if (user.isEmpty() || !passwordEncoder.matches(request.password(), user.get().getPassword())) {
+            // Only failures count toward the limit — a legitimate user
+            // logging in repeatedly (multiple devices, expired sessions,
+            // ...) shouldn't get penalized.
+            rateLimiter.recordAttempt(rateLimitKey);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
 
-        String token = jwtUtil.generateToken(user.getId());
+        String token = jwtUtil.generateToken(user.get().getId());
         return new AuthResponse(token, "Bearer", jwtUtil.getExpirationMs() / 1000);
     }
 
     public MessageResponse requestPasswordReset(ForgotPasswordRequest request) {
+        String rateLimitKey = rateLimitKey("forgot-password", request.email());
+        ensureNotRateLimited(rateLimitKey);
+        // Every call counts here, success or not — this isn't about
+        // guessing a secret, it's about throttling how often the
+        // OTP-generation + email-send action can be triggered for a target.
+        rateLimiter.recordAttempt(rateLimitKey);
+
         userRepository.findByEmail(request.email())
                 .ifPresent(
                         user -> {
@@ -93,18 +109,23 @@ public class AuthService {
     }
 
     public VerifyOtpResponse verifyOtp(VerifyOtpRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(AuthService::invalidOtp);
+        String rateLimitKey = rateLimitKey("verify-otp", request.email());
+        ensureNotRateLimited(rateLimitKey);
 
-        if (!isOtpValid(user, request.otp())) {
+        Optional<User> user = userRepository.findByEmail(request.email());
+        if (user.isEmpty() || !isOtpValid(user.get(), request.otp())) {
+            // Only failures count — same reasoning as login.
+            rateLimiter.recordAttempt(rateLimitKey);
             throw invalidOtp();
         }
-        user.setOtp(null);
-        user.setOtpExpiration(null);
-        userRepository.save(user);
+
+        User validUser = user.get();
+        validUser.setOtp(null);
+        validUser.setOtpExpiration(null);
+        userRepository.save(validUser);
 
         return new VerifyOtpResponse(
-                jwtUtil.generatePasswordResetToken(user.getId()),
+                jwtUtil.generatePasswordResetToken(validUser.getId()),
                 jwtUtil.getResetExpirationMs() / 1000);
     }
 
@@ -183,5 +204,17 @@ public class AuthService {
 
     private static ResponseStatusException invalidToken() {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired token");
+    }
+
+    // scope keeps login/verify-otp/forgot-password counted independently,
+    // so hitting one endpoint's limit doesn't consume another's budget.
+    private static String rateLimitKey(String scope, String email) {
+        return scope + ":" + email;
+    }
+
+    private void ensureNotRateLimited(String rateLimitKey) {
+        if (rateLimiter.isBlocked(rateLimitKey)) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many attempts, try again later");
+        }
     }
 }
