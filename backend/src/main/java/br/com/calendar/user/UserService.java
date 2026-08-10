@@ -2,7 +2,6 @@ package br.com.calendar.user;
 
 import br.com.calendar.configuration.ConfigurationService;
 import br.com.calendar.user.dto.ChangePasswordDTO;
-import br.com.calendar.user.dto.ConfirmEmailDTO;
 import br.com.calendar.user.dto.CreateUserDTO;
 import br.com.calendar.user.dto.OtpResponseDTO;
 import br.com.calendar.user.dto.UpdateUserDTO;
@@ -13,8 +12,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
@@ -71,19 +68,6 @@ public class UserService {
         return userMapper.toResponse(savedUser);
     }
 
-    public OtpResponseDTO generateEmailConfirmationOtp(String id) {
-        User user = findUserOrThrow(id);
-
-        String otp = generateOtp();
-        user.setEmailConfirmationOtp(otp);
-        user.setEmailConfirmationOtpExpiration(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES));
-        userRepository.save(user);
-
-        // TODO: send this via email once an email service exists. Returning it
-        // directly for now so the confirmation flow can be tested manually.
-        return new OtpResponseDTO(otp);
-    }
-
     public OtpResponseDTO generatePasswordResetOtp(String id) {
         User user = findUserOrThrow(id);
 
@@ -92,32 +76,16 @@ public class UserService {
         user.setOtpExpiration(LocalDateTime.now().plusMinutes(OTP_VALIDITY_MINUTES));
         userRepository.save(user);
 
-        // TODO: send this via email once an email service exists. Returning it
-        // directly for now so the forgot-password flow can be tested manually.
+        // The caller (AuthService) is responsible for emailing this code.
         return new OtpResponseDTO(otp);
     }
 
-    public UserResponseDTO confirmEmail(String id, ConfirmEmailDTO dto) {
+    // The caller (AuthService) is responsible for identifying and authorizing
+    // which user this is via the email-confirmation JWT before calling this.
+    public void markEmailConfirmed(String id) {
         User user = findUserOrThrow(id);
-
-        if (user.getEmailConfirmationOtp() == null || user.getEmailConfirmationOtpExpiration() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No confirmation code was requested");
-        }
-
-        if (user.getEmailConfirmationOtpExpiration().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Confirmation code expired");
-        }
-
-        if (!constantTimeEquals(user.getEmailConfirmationOtp(), dto.otp())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid confirmation code");
-        }
-
         user.setEmailConfirmed(true);
-        user.setEmailConfirmationOtp(null);
-        user.setEmailConfirmationOtpExpiration(null);
-
-        User savedUser = userRepository.save(user);
-        return userMapper.toResponse(savedUser);
+        userRepository.save(user);
     }
 
     public void changePassword(String id, ChangePasswordDTO dto) {
@@ -137,10 +105,6 @@ public class UserService {
         User user = findUserOrThrow(id);
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-    }
-
-    private static boolean constantTimeEquals(String a, String b) {
-        return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
     }
 
     private User findUserOrThrow(String id) {

@@ -37,16 +37,6 @@ public class User extends BaseEntity {
     @Column(name = "otp_expiration")
     private LocalDateTime otpExpiration;
 
-    // Used exclusively by the email-confirmation flow (see UserService), kept
-    // separate from otp/otpExpiration above so a code issued for one purpose
-    // can't be used for the other.
-    @ToString.Exclude
-    @Column(name = "email_confirmation_otp", length = 8)
-    private String emailConfirmationOtp;
-
-    @Column(name = "email_confirmation_otp_expiration")
-    private LocalDateTime emailConfirmationOtpExpiration;
-
     @ToString.Exclude
     @Column(length = 100)
     private String password;
