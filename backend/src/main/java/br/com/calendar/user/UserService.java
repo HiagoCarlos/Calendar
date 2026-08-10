@@ -6,6 +6,7 @@ import br.com.calendar.user.dto.CreateUserDTO;
 import br.com.calendar.user.dto.OtpResponseDTO;
 import br.com.calendar.user.dto.UpdateUserDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,12 @@ public class UserService {
         user.setEmailConfirmed(false);
         user.setPassword(passwordEncoder.encode(dto.password()));
 
-        User savedUser = userRepository.save(user);
+        // The check above is best-effort: two concurrent signups for the
+        // same email could both pass it before either INSERT commits. The
+        // unique constraint on users.email (V3) is what actually prevents
+        // the duplicate; this just turns that race into the same clean
+        // error instead of a raw constraint-violation failure.
+        User savedUser = saveWithUniqueEmail(user, "Unable to complete registration");
         configurationService.createDefaultConfiguration(savedUser.getId());
 
         return userMapper.toResponse(savedUser);
@@ -69,7 +75,7 @@ public class UserService {
             user.setEmail(dto.email());
         }
 
-        User savedUser = userRepository.save(user);
+        User savedUser = saveWithUniqueEmail(user, "Email is already in use");
 
         return userMapper.toResponse(savedUser);
     }
@@ -111,6 +117,14 @@ public class UserService {
         User user = findUserOrThrow(id);
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+
+    private User saveWithUniqueEmail(User user, String duplicateEmailMessage) {
+        try {
+            return userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, duplicateEmailMessage, e);
+        }
     }
 
     private User findUserOrThrow(String id) {

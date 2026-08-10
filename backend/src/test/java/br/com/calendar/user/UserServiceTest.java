@@ -4,12 +4,14 @@ import br.com.calendar.configuration.ConfigurationService;
 import br.com.calendar.user.dto.ChangePasswordDTO;
 import br.com.calendar.user.dto.CreateUserDTO;
 import br.com.calendar.user.dto.OtpResponseDTO;
+import br.com.calendar.user.dto.UpdateUserDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -79,6 +81,53 @@ class UserServiceTest {
         assertThrows(ResponseStatusException.class, () -> userService.createUser(dto));
 
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void createUserWithEmailTakenByAConcurrentSignupThrows() {
+        // findByEmail sees nothing (no race yet), but the unique constraint
+        // catches it at insert time — the classic TOCTOU race.
+        CreateUserDTO dto = new CreateUserDTO("Danillo", "test@example.com", "plain-password");
+        User mappedUser = new User();
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
+        when(userMapper.toEntity(dto)).thenReturn(mappedUser);
+        when(passwordEncoder.encode("plain-password")).thenReturn("hashed-password");
+        when(userRepository.save(mappedUser)).thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        assertThrows(ResponseStatusException.class, () -> userService.createUser(dto));
+
+        verify(configurationService, never()).createDefaultConfiguration(any(String.class));
+    }
+
+    @Test
+    void updateUserChangesNameAndEmail() {
+        User user = new User();
+        user.setId(USER_ID);
+        user.setName("Old Name");
+        user.setEmail("old@example.com");
+        UserResponseDTO expected = new UserResponseDTO(USER_ID, "New Name", "new@example.com", false, null, null);
+
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userMapper.toResponse(user)).thenReturn(expected);
+
+        UserResponseDTO response = userService.updateUser(USER_ID, new UpdateUserDTO("New Name", "new@example.com"));
+
+        assertEquals(expected, response);
+        assertEquals("New Name", user.getName());
+        assertEquals("new@example.com", user.getEmail());
+    }
+
+    @Test
+    void updateUserWithEmailAlreadyTakenByAnotherUserThrows() {
+        User user = new User();
+        user.setId(USER_ID);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenThrow(new DataIntegrityViolationException("duplicate key"));
+
+        assertThrows(ResponseStatusException.class,
+                () -> userService.updateUser(USER_ID, new UpdateUserDTO(null, "taken@example.com")));
     }
 
     @Test
