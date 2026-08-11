@@ -1,3 +1,4 @@
+import 'package:calendar/view/auth/ViewForgotPassword.dart';
 import 'package:calendar/view/auth/ViewSignup.dart';
 import 'package:calendar/widget/WidgetBody.dart';
 import 'package:calendar/widget/WidgetButton.dart';
@@ -26,22 +27,32 @@ class _ViewLogin extends State<ViewLogin> {
         ),
         SizedBox(height: 50),
 
-        WidgetInput(
-          label: "Email"
-        ),
+        WidgetInput(label: "Email"),
 
         Column(
           children: [
-            
             WidgetInput(
               label: "Senha",
               password: true,
-              icon: Icons.lock_outline
+              icon: Icons.lock_outline,
             ),
 
-            WidgetButton(
-              text: "Entrar"
+            WidgetButton(text: "Entrar"),
+
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ViewForgotPassword()),
+                );
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [Text("Esqueceu a senha?")],
+              ),
             ),
+
+            SizedBox(height:30),
             
             WidgetOAuth("OU ENTRAR COM"),
 
@@ -49,16 +60,12 @@ class _ViewLogin extends State<ViewLogin> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => ViewSignup(),
-                  ),
+                  MaterialPageRoute(builder: (context) => ViewSignup()),
                 );
               },
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("Não tem uma conta? Criar Conta"),
-                ],
+                children: [Text("Não tem uma conta? Criar Conta")],
               ),
             ),
             SizedBox(height: 15),
