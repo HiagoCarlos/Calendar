@@ -1,6 +1,7 @@
 package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
+import br.com.calendar.auth.dto.ConfirmEmailRequest;
 import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.ResetPasswordRequest;
@@ -8,6 +9,7 @@ import br.com.calendar.auth.dto.SignupRequest;
 import br.com.calendar.auth.dto.VerifyOtpRequest;
 import br.com.calendar.auth.dto.VerifyOtpResponse;
 import br.com.calendar.common.dto.MessageResponse;
+import br.com.calendar.email.EmailService;
 import br.com.calendar.user.User;
 import br.com.calendar.user.UserRepository;
 import br.com.calendar.user.UserService;
@@ -20,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -31,6 +32,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,11 +58,18 @@ class AuthServiceTest {
     @Mock
     private TokenBlacklist tokenBlacklist;
 
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private RateLimiter rateLimiter;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, userService, passwordEncoder, jwtUtil, tokenBlacklist);
+        authService = new AuthService(userRepository, userService, passwordEncoder, jwtUtil, tokenBlacklist,
+                emailService, rateLimiter, "http://localhost:4200");
     }
 
     @Test
@@ -68,6 +78,7 @@ class AuthServiceTest {
                 USER_ID, "Danillo", "test@example.com", false, Instant.now(), Instant.now());
 
         when(userService.createUser(any(CreateUserDTO.class))).thenReturn(created);
+        when(jwtUtil.generateEmailConfirmationToken(USER_ID)).thenReturn("confirmation-token");
         when(jwtUtil.generateToken(USER_ID)).thenReturn("jwt-token");
         when(jwtUtil.getExpirationMs()).thenReturn(86400000L);
 
@@ -76,6 +87,7 @@ class AuthServiceTest {
 
         assertEquals("jwt-token", response.accessToken());
         assertEquals("Bearer", response.tokenType());
+        verify(emailService).send(eq("test@example.com"), any(String.class), contains("confirmation-token"));
     }
 
     @Test
@@ -94,6 +106,17 @@ class AuthServiceTest {
 
         assertEquals("jwt-token", response.accessToken());
         assertEquals("Bearer", response.tokenType());
+        verify(rateLimiter, never()).recordAttempt(any(String.class));
+    }
+
+    @Test
+    void loginWithTooManyAttemptsThrows() {
+        when(rateLimiter.isBlocked("login:test@example.com")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class,
+                () -> authService.login(new LoginRequest("test@example.com", "plain-password")));
+
+        verify(userRepository, never()).findByEmail(any(String.class));
     }
 
     @Test
@@ -106,7 +129,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail(any(String.class))).thenReturn(Optional.of(user));
 
         SecureRandom random = new SecureRandom();
-        when(userService.generateEmailConfirmationOtp(any(String.class)))
+        when(userService.generatePasswordResetOtp(any(String.class)))
                 .thenReturn(
                         new OtpResponseDTO(String.format("%06d", random.nextInt(1_000_000)))
                 );
@@ -114,7 +137,8 @@ class AuthServiceTest {
         MessageResponse messageResponse = authService.requestPasswordReset(new ForgotPasswordRequest("test@example.com"));
 
         assertEquals("If the email is registered, password reset instructions will be sent.", messageResponse.message());
-        verify(userService).generateEmailConfirmationOtp(user.getId());
+        verify(userService).generatePasswordResetOtp(user.getId());
+        verify(emailService).send(eq("test@example.com"), any(String.class), any(String.class));
     }
 
     @Test
@@ -124,6 +148,16 @@ class AuthServiceTest {
         MessageResponse messageResponse = authService.requestPasswordReset(new ForgotPasswordRequest("test@example.com"));
 
         assertEquals("If the email is registered, password reset instructions will be sent.", messageResponse.message());
+    }
+
+    @Test
+    void requestPasswordResetWithTooManyAttemptsThrows() {
+        when(rateLimiter.isBlocked("forgot-password:test@example.com")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class,
+                () -> authService.requestPasswordReset(new ForgotPasswordRequest("test@example.com")));
+
+        verify(userRepository, never()).findByEmail(any(String.class));
     }
 
     @Test
@@ -138,6 +172,8 @@ class AuthServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> authService.login(new LoginRequest("test@example.com", "wrong-password")));
+
+        verify(rateLimiter).recordAttempt("login:test@example.com");
     }
 
     @Test
@@ -146,6 +182,8 @@ class AuthServiceTest {
 
         assertThrows(ResponseStatusException.class,
                 () -> authService.login(new LoginRequest("unknown@example.com", "any-password")));
+
+        verify(rateLimiter).recordAttempt("login:unknown@example.com");
     }
 
     @Test
@@ -164,6 +202,17 @@ class AuthServiceTest {
         assertNull(user.getOtp());
         assertNull(user.getOtpExpiration());
         verify(userRepository).save(user);
+        verify(rateLimiter, never()).recordAttempt(any(String.class));
+    }
+
+    @Test
+    void verifyOtpWithTooManyAttemptsThrows() {
+        when(rateLimiter.isBlocked("verify-otp:test@example.com")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class, () -> authService.verifyOtp(
+                new VerifyOtpRequest("test@example.com", "123456")));
+
+        verify(userRepository, never()).findByEmail(any(String.class));
     }
 
     @Test
@@ -175,6 +224,7 @@ class AuthServiceTest {
         assertThrows(ResponseStatusException.class, () -> authService.verifyOtp(
                 new VerifyOtpRequest("test@example.com", "999999")));
         verify(userRepository, never()).save(any(User.class));
+        verify(rateLimiter).recordAttempt("verify-otp:test@example.com");
     }
 
     @Test
@@ -260,21 +310,115 @@ class AuthServiceTest {
     }
 
     @Test
-    void resetPasswordWithValidOtpSucceeds() {
-        ResetPasswordRequest request = new ResetPasswordRequest("123456", "newPassword123", "newPassword123");
+    void resetPasswordWithValidResetTokenSucceeds() {
+        ResetPasswordRequest request = new ResetPasswordRequest("reset-token", "newPassword123", "newPassword123");
+
+        when(tokenBlacklist.isRevoked("reset-token")).thenReturn(false);
+        when(jwtUtil.isExpired("reset-token")).thenReturn(false);
+        when(jwtUtil.getScope("reset-token")).thenReturn(JwtUtil.SCOPE_PASSWORD_RESET);
+        when(jwtUtil.extractUserId("reset-token")).thenReturn(USER_ID);
 
         authService.resetPassword(request);
 
-        verify(userService).resetPassword(any(br.com.calendar.user.dto.ResetPasswordDTO.class));
+        verify(userService).resetPassword(USER_ID, "newPassword123");
+        verify(tokenBlacklist).revoke("reset-token");
     }
 
     @Test
     void resetPasswordWithMismatchedPasswordsThrows() {
-        ResetPasswordRequest request = new ResetPasswordRequest("123456", "newPassword123", "differentPassword");
-
-        org.mockito.Mockito.doThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match"))
-                .when(userService).resetPassword(any(br.com.calendar.user.dto.ResetPasswordDTO.class));
+        ResetPasswordRequest request = new ResetPasswordRequest("reset-token", "newPassword123", "differentPassword");
 
         assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
+
+        verify(userService, never()).resetPassword(any(String.class), any(String.class));
+    }
+
+    @Test
+    void resetPasswordWithNonResetScopeTokenThrows() {
+        ResetPasswordRequest request = new ResetPasswordRequest("access-token", "newPassword123", "newPassword123");
+
+        when(tokenBlacklist.isRevoked("access-token")).thenReturn(false);
+        when(jwtUtil.isExpired("access-token")).thenReturn(false);
+        when(jwtUtil.getScope("access-token")).thenReturn(null);
+
+        assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
+
+        verify(userService, never()).resetPassword(any(String.class), any(String.class));
+    }
+
+    @Test
+    void resetPasswordWithExpiredResetTokenThrows() {
+        ResetPasswordRequest request = new ResetPasswordRequest("reset-token", "newPassword123", "newPassword123");
+
+        when(tokenBlacklist.isRevoked("reset-token")).thenReturn(false);
+        when(jwtUtil.isExpired("reset-token")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
+
+        verify(userService, never()).resetPassword(any(String.class), any(String.class));
+    }
+
+    @Test
+    void resetPasswordWithAlreadyUsedResetTokenThrows() {
+        ResetPasswordRequest request = new ResetPasswordRequest("reset-token", "newPassword123", "newPassword123");
+
+        when(tokenBlacklist.isRevoked("reset-token")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
+
+        verify(userService, never()).resetPassword(any(String.class), any(String.class));
+    }
+
+    @Test
+    void resetPasswordWithMalformedResetTokenThrows() {
+        ResetPasswordRequest request = new ResetPasswordRequest("not-a-real-jwt", "newPassword123", "newPassword123");
+
+        when(tokenBlacklist.isRevoked("not-a-real-jwt")).thenReturn(false);
+        when(jwtUtil.isExpired("not-a-real-jwt"))
+                .thenThrow(new io.jsonwebtoken.MalformedJwtException("Invalid JWT"));
+
+        assertThrows(ResponseStatusException.class, () -> authService.resetPassword(request));
+
+        verify(userService, never()).resetPassword(any(String.class), any(String.class));
+    }
+
+    @Test
+    void confirmEmailWithValidTokenMarksEmailConfirmed() {
+        ConfirmEmailRequest request = new ConfirmEmailRequest("confirmation-token");
+
+        when(tokenBlacklist.isRevoked("confirmation-token")).thenReturn(false);
+        when(jwtUtil.isExpired("confirmation-token")).thenReturn(false);
+        when(jwtUtil.getScope("confirmation-token")).thenReturn(JwtUtil.SCOPE_EMAIL_CONFIRMATION);
+        when(jwtUtil.extractUserId("confirmation-token")).thenReturn(USER_ID);
+
+        authService.confirmEmail(request);
+
+        verify(userService).markEmailConfirmed(USER_ID);
+        verify(tokenBlacklist, never()).revoke(any(String.class));
+    }
+
+    @Test
+    void confirmEmailWithPasswordResetScopeTokenThrows() {
+        ConfirmEmailRequest request = new ConfirmEmailRequest("reset-token");
+
+        when(tokenBlacklist.isRevoked("reset-token")).thenReturn(false);
+        when(jwtUtil.isExpired("reset-token")).thenReturn(false);
+        when(jwtUtil.getScope("reset-token")).thenReturn(JwtUtil.SCOPE_PASSWORD_RESET);
+
+        assertThrows(ResponseStatusException.class, () -> authService.confirmEmail(request));
+
+        verify(userService, never()).markEmailConfirmed(any(String.class));
+    }
+
+    @Test
+    void confirmEmailWithExpiredTokenThrows() {
+        ConfirmEmailRequest request = new ConfirmEmailRequest("confirmation-token");
+
+        when(tokenBlacklist.isRevoked("confirmation-token")).thenReturn(false);
+        when(jwtUtil.isExpired("confirmation-token")).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class, () -> authService.confirmEmail(request));
+
+        verify(userService, never()).markEmailConfirmed(any(String.class));
     }
 }
