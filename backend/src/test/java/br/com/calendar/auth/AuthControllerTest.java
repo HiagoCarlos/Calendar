@@ -1,9 +1,15 @@
 package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
+import br.com.calendar.auth.dto.ConfirmEmailRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.ResetPasswordRequest;
 import br.com.calendar.auth.dto.SignupRequest;
+import br.com.calendar.auth.dto.VerifyOtpRequest;
+import br.com.calendar.auth.dto.VerifyOtpResponse;
+import br.com.calendar.user.UserService;
+import br.com.calendar.user.dto.OtpResponseDTO;
+import br.com.calendar.user.dto.UserResponseDTO;
 import br.com.calendar.user.dto.UserSummaryDTO;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +23,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -34,6 +42,12 @@ class AuthControllerTest {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     private static final String NAME = "Test User";
     private static final String EMAIL = "test-auth@example.com";
@@ -97,7 +111,7 @@ class AuthControllerTest {
                 result.getResponse().getContentAsString(), AuthResponse.class);
         String token = authResponse.accessToken();
 
-        mockMvc.perform(get("/me")
+        mockMvc.perform(get("/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", notNullValue()))
@@ -106,7 +120,7 @@ class AuthControllerTest {
 
     @Test
     void meWithoutTokenReturns401() throws Exception {
-        mockMvc.perform(get("/me"))
+        mockMvc.perform(get("/auth/me"))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -149,26 +163,53 @@ class AuthControllerTest {
                 .andExpect(status().isNoContent());
 
         // try to use the revoked token
-        mockMvc.perform(get("/me")
+        mockMvc.perform(get("/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void resetPasswordWithValidOtpReturns200() throws Exception {
-        // This test requires a valid OTP in the database
-        // For now, we test with an invalid OTP to verify the endpoint works
-        ResetPasswordRequest request = new ResetPasswordRequest("123456", "newPassword123", "newPassword123");
+    void resetPasswordWithValidResetTokenSucceedsAndChangesThePassword() throws Exception {
+        String email = "reset-" + System.currentTimeMillis() + "@example.com";
+        authService.signup(new SignupRequest("Reset User", email, PASSWORD));
+        UserResponseDTO user = userService.getUserByEmail(email);
+        OtpResponseDTO otp = userService.generatePasswordResetOtp(user.id());
+
+        VerifyOtpResponse verifyOtpResponse = verifyOtp(email, otp.otp());
+
+        ResetPasswordRequest request = new ResetPasswordRequest(
+                verifyOtpResponse.resetToken(), "newPassword123", "newPassword123");
 
         mockMvc.perform(post("/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest()); // OTP invalid
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest(email, "newPassword123"))))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest(email, PASSWORD))))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void resetPasswordWithMismatchedPasswordsReturns400() throws Exception {
-        ResetPasswordRequest request = new ResetPasswordRequest("123456", "newPassword123", "differentPassword");
+    void resetPasswordWithAlreadyUsedResetTokenReturns400() throws Exception {
+        String email = "reset-reuse-" + System.currentTimeMillis() + "@example.com";
+        authService.signup(new SignupRequest("Reset User", email, PASSWORD));
+        UserResponseDTO user = userService.getUserByEmail(email);
+        OtpResponseDTO otp = userService.generatePasswordResetOtp(user.id());
+
+        VerifyOtpResponse verifyOtpResponse = verifyOtp(email, otp.otp());
+        ResetPasswordRequest request = new ResetPasswordRequest(
+                verifyOtpResponse.resetToken(), "newPassword123", "newPassword123");
+
+        mockMvc.perform(post("/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
 
         mockMvc.perform(post("/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -177,12 +218,94 @@ class AuthControllerTest {
     }
 
     @Test
-    void resetPasswordWithBlankOtpReturns400() throws Exception {
+    void resetPasswordWithAccessTokenInsteadOfResetTokenReturns400() throws Exception {
+        LoginRequest loginRequest = new LoginRequest(EMAIL, PASSWORD);
+        MvcResult result = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+        AuthResponse authResponse = objectMapper.readValue(
+                result.getResponse().getContentAsString(), AuthResponse.class);
+
+        ResetPasswordRequest request = new ResetPasswordRequest(
+                authResponse.accessToken(), "newPassword123", "newPassword123");
+
+        mockMvc.perform(post("/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void resetPasswordWithMismatchedPasswordsReturns400() throws Exception {
+        ResetPasswordRequest request = new ResetPasswordRequest("some-token", "newPassword123", "differentPassword");
+
+        mockMvc.perform(post("/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void resetPasswordWithBlankResetTokenReturns400() throws Exception {
         ResetPasswordRequest request = new ResetPasswordRequest("", "newPassword123", "newPassword123");
 
         mockMvc.perform(post("/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void confirmEmailWithValidTokenMarksEmailConfirmed() throws Exception {
+        String email = "confirm-" + System.currentTimeMillis() + "@example.com";
+        authService.signup(new SignupRequest("Confirm User", email, PASSWORD));
+        UserResponseDTO user = userService.getUserByEmail(email);
+        assertFalse(user.emailConfirmed());
+
+        String token = jwtUtil.generateEmailConfirmationToken(user.id());
+
+        mockMvc.perform(post("/auth/confirm-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ConfirmEmailRequest(token))))
+                .andExpect(status().isOk());
+
+        assertTrue(userService.getUserByEmail(email).emailConfirmed());
+    }
+
+    @Test
+    void confirmEmailWithAccessTokenInsteadOfConfirmationTokenReturns400() throws Exception {
+        LoginRequest loginRequest = new LoginRequest(EMAIL, PASSWORD);
+        MvcResult result = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+        AuthResponse authResponse = objectMapper.readValue(
+                result.getResponse().getContentAsString(), AuthResponse.class);
+
+        mockMvc.perform(post("/auth/confirm-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ConfirmEmailRequest(authResponse.accessToken()))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void confirmEmailWithBlankTokenReturns400() throws Exception {
+        mockMvc.perform(post("/auth/confirm-email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ConfirmEmailRequest(""))))
+                .andExpect(status().isBadRequest());
+    }
+
+    private VerifyOtpResponse verifyOtp(String email, String otp) throws Exception {
+        MvcResult result = mockMvc.perform(post("/auth/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new VerifyOtpRequest(email, otp))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return objectMapper.readValue(result.getResponse().getContentAsString(), VerifyOtpResponse.class);
     }
 }

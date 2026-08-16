@@ -1,8 +1,6 @@
 package br.com.calendar.user;
 
 import br.com.calendar.user.dto.ChangePasswordDTO;
-import br.com.calendar.user.dto.ConfirmEmailDTO;
-import br.com.calendar.user.dto.OtpResponseDTO;
 import br.com.calendar.user.dto.UpdateUserDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,7 +11,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,20 +39,6 @@ public class UserController {
     public ResponseEntity<UserResponseDTO> updateUser(@PathVariable String id, @Valid @RequestBody UpdateUserDTO dto) {
         checkOwnership(id);
         return ResponseEntity.ok(userService.updateUser(id, dto));
-    }
-
-    @Operation(summary = "Generate email confirmation OTP")
-    @PostMapping("/{id}/otp")
-    public ResponseEntity<OtpResponseDTO> generateOtp(@PathVariable String id) {
-        checkOwnership(id);
-        return ResponseEntity.ok(userService.generateEmailConfirmationOtp(id));
-    }
-
-    @Operation(summary = "Confirm user email")
-    @PostMapping("/{id}/confirm-email")
-    public ResponseEntity<UserResponseDTO> confirmEmail(@PathVariable String id, @Valid @RequestBody ConfirmEmailDTO dto) {
-        checkOwnership(id);
-        return ResponseEntity.ok(userService.confirmEmail(id, dto));
     }
 
     @Operation(summary = "Change user password")

@@ -13,9 +13,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @EnableScheduling
 public class TokenBlacklist {
 
-    // WARNING: isso é in-memory. Se rodar mais de uma instância do backend
-    // (load balancer, etc.), um logout numa instância não invalida o token
-    // nas outras. Trocar por Redis/DB quando precisar de multi-instância.
+    // WARNING: this is in-memory. If more than one backend instance is
+    // running (load balancer, etc.), a logout on one instance won't revoke
+    // the token on the others. Switch to Redis/DB when multi-instance
+    // support is needed.
     private final Map<String, Instant> revokedTokens = new ConcurrentHashMap<>();
     private final JwtUtil jwtUtil;
 
@@ -32,8 +33,8 @@ public class TokenBlacklist {
         return revokedTokens.containsKey(token);
     }
 
-    // roda a cada hora pra limpar tokens expirados da memória,
-    // sem depender de alguém fazer logout pra triggerar a limpeza.
+    // Runs hourly to clear expired tokens from memory, without relying on
+    // someone calling logout to trigger the cleanup.
     @Scheduled(fixedRate = 3600000)
     public void cleanExpired() {
         Instant now = Instant.now();

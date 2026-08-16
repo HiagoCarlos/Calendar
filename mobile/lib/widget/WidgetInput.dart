@@ -5,12 +5,14 @@ class WidgetInput extends StatefulWidget {
       super.key,
       this.label="",
       this.password=false,
-      this.icon = Icons.mail_outlined
+      this.icon = Icons.mail_outlined,
+      this.validator,
     });
 
     final String label;
     final bool password;
     final IconData icon;
+    final String? Function(String?)? validator;
 
     @override
     _WidgetInput createState() => _WidgetInput();
@@ -24,6 +26,7 @@ class _WidgetInput extends State<WidgetInput> {
           children: [
             TextFormField(
               obscureText: widget.password,
+              validator: widget.validator,
               decoration: InputDecoration(
                 hintText: widget.password?"•••••••":"",
                 labelText: widget.label,
