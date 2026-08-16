@@ -21,6 +21,7 @@ Contributors will be added here after their first accepted Pull Request.
 | Flávio Pavim            | Flutter        | https://flaviopavim.com.br                                   |
 | Estefânio Silva Ribeiro | Layouts & Docs | https://linkedin.com/in/estef%C3%A2nio-silva-5319b2133       |
 | Maria Giulia E. Dineli  | Backlog        | https://linkedin.com/in/maria-giulia-elias-dineli-73861921a/ |
+| Murilo Souza C | Frontend Angular | https://github.com/murilotecoteco |
 
 ---
 
@@ -43,3 +44,4 @@ Os colaboradores serão adicionados aqui após o primeiro Pull Request aceito.
 | Flávio Pavim            | Flutter        | https://flaviopavim.com.br                                   |
 | Estefânio Silva Ribeiro | Layouts & Docs | https://linkedin.com/in/estef%C3%A2nio-silva-5319b2133       |
 | Maria Giulia E. Dineli  | Backlog        | https://linkedin.com/in/maria-giulia-elias-dineli-73861921a/ |
+| Murilo Souza C | Frontend Angular | https://github.com/murilotecoteco |
