@@ -6,7 +6,7 @@ CREATE TABLE audit_users(
     action VARCHAR(10) NOT NULL ,
     old_data JSONB,
     new_data JSONB,
-    created_at TIMESTAMPZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 --Tabela auditoria para tasks
@@ -16,5 +16,5 @@ CREATE TABLE audit_tasks(
     action VARCHAR(10) NOT NULL ,
     old_data JSONB,
     new_data JSONB,
-    created_at TIMESTAMPZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

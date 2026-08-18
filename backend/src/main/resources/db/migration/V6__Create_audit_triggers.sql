@@ -5,5 +5,5 @@ CREATE TRIGGER users_audit_trigger
 
 --TRIGGER table tasks
 CREATE TRIGGER tasks_audit_trigger
-    AFTER INSERT OR UPDATE OR DELETE ON tasks
+    AFTER INSERT OR UPDATE OR DELETE ON task
     FOR EACH ROW EXECUTE FUNCTION log_tasks_audit();
