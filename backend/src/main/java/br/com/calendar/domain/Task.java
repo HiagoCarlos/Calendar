@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.annotations.SQLDelete;
 
 import java.time.Instant;
 
@@ -22,6 +23,7 @@ import java.time.Instant;
 @RequiredArgsConstructor
 @Entity
 @Table(name = "task")
+@SQLDelete(sql = "UPDATE task SET deleted_at = now() WHERE id = ?")
 public class Task extends BaseEntity {
 
     @ToString.Exclude
@@ -58,4 +60,7 @@ public class Task extends BaseEntity {
 
     @Column(name = "all_day")
     private Boolean allDay;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 }
