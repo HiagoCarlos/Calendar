@@ -1,20 +1,18 @@
---Tabela auditoria para usuarios
--- data se refere ao dado armazenado, old_data e new_data armazenam essa alteracao de dados
 CREATE TABLE audit_users(
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY ,
     users_id BIGINT NOT NULL ,
     action VARCHAR(10) NOT NULL ,
     old_data JSONB,
     new_data JSONB,
-    created_at TIMESTAMPZ DEFAULT CURRENT_TIMESTAMP
+    created_at timestamptz DEFAULT CURRENT_TIMESTAMP
 );
 
---Tabela auditoria para tasks
+
 CREATE TABLE audit_tasks(
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY ,
     task_id BIGINT NOT NULL,
     action VARCHAR(10) NOT NULL ,
     old_data JSONB,
     new_data JSONB,
-    created_at TIMESTAMPZ DEFAULT CURRENT_TIMESTAMP
+    created_at timestamptz DEFAULT CURRENT_TIMESTAMP
 );
