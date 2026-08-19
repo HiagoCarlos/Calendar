@@ -1,6 +1,6 @@
 CREATE TABLE audit_users(
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY ,
-    users_id BIGINT NOT NULL ,
+    users_id VARCHAR(21) NOT NULL ,
     action VARCHAR(10) NOT NULL ,
     old_data JSONB,
     new_data JSONB,
