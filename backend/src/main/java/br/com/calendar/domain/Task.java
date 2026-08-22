@@ -63,4 +63,7 @@ public class Task extends BaseEntity {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    @Column(name = "completed_at")
+    private Instant completedAt;
 }
