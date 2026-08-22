@@ -1,22 +1,28 @@
 package br.com.calendar.service;
 
-import br.com.calendar.domain.Task;
-import br.com.calendar.domain.TaskRepository;
-import br.com.calendar.user.User;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
+
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
+import br.com.calendar.common.exception.ResourceNotFoundException;
+import br.com.calendar.domain.Task;
+import br.com.calendar.domain.TaskMapper;
+import br.com.calendar.domain.TaskRepository;
+import br.com.calendar.domain.dto.TaskRequestDTO;
+import br.com.calendar.domain.dto.TaskResponseDTO;
+import br.com.calendar.user.User;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class TaskService {
 
     private final TaskRepository repository;
+    private final TaskMapper taskMapper;
 
     public Task createTask(Task task) {
         // Get the currently authenticated user from the security context
@@ -33,10 +39,20 @@ public class TaskService {
 
     public void deleteTask(String id) {
         repository.findByIdAndDeletedAtIsNull(id)
-            .ifPresent(task -> repository.deleteById(id));
+                .ifPresent(task -> repository.deleteById(id));
     }
 
     public List<Task> getTaskHistory() {
         return repository.findAll();
+    }
+
+    public TaskResponseDTO updateTask(TaskRequestDTO task, String TaskId) {
+        Task existingTask = repository.findById(TaskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        taskMapper.updateEntity(existingTask, task);
+
+        return taskMapper.toResponse(repository.save(existingTask));
+
     }
 }

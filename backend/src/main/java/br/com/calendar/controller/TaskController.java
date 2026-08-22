@@ -1,20 +1,25 @@
 package br.com.calendar.controller;
 
-import br.com.calendar.domain.Task;
-import br.com.calendar.service.TaskService;
-import lombok.AllArgsConstructor;
+import java.time.LocalDate;
+import java.util.List;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.calendar.domain.Task;
+import br.com.calendar.domain.dto.TaskRequestDTO;
+import br.com.calendar.domain.dto.TaskResponseDTO;
+import br.com.calendar.service.TaskService;
+import lombok.AllArgsConstructor;
 
-import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/tasks")
@@ -40,5 +45,11 @@ public class TaskController {
     @GetMapping("/history")
     public ResponseEntity<List<Task>> getTaskHistory() {
         return ResponseEntity.ok(service.getTaskHistory());
+    }
+    
+    @PatchMapping("/{id}")
+    public ResponseEntity<TaskResponseDTO> updateTask(@PathVariable String id, @RequestBody TaskRequestDTO task) {
+        TaskResponseDTO updatedTask = service.updateTask(task, id);
+        return ResponseEntity.ok(updatedTask);
     }
 }
