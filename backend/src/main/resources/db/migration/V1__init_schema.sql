@@ -47,7 +47,8 @@ CREATE TABLE task
     repeat_interval varchar(15),
     all_day         boolean,
     created_at      timestamptz,
-    updated_at      timestamptz
+    updated_at      timestamptz,
+    completed_at    timestamptz
 );
 
 
