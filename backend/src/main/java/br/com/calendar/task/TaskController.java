@@ -1,4 +1,4 @@
-package br.com.calendar.controller;
+package br.com.calendar.task;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,10 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import br.com.calendar.domain.Task;
-import br.com.calendar.domain.dto.TaskRequestDTO;
-import br.com.calendar.domain.dto.TaskResponseDTO;
-import br.com.calendar.service.TaskService;
+import br.com.calendar.task.dto.TaskRequestDTO;
+import br.com.calendar.task.dto.TaskResponseDTO;
 import lombok.AllArgsConstructor;
 
 @RestController
