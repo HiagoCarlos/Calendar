@@ -5,6 +5,7 @@ import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -49,6 +50,12 @@ public class TaskService {
     public TaskResponseDTO updateTask(TaskRequestDTO task, String taskId) {
         Task existingTask = repository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (currentUser.getId() != existingTask.getUser().getId()) {
+            throw new AccessDeniedException("Task does not belong to the current user");
+        }
 
         taskMapper.updateEntity(existingTask, task);
 
