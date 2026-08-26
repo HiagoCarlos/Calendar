@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -329,6 +330,122 @@ class TaskServiceTest {
 
         assertThrows(AccessDeniedException.class,
                 () -> taskService.updateTask(request, TASK_ID));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void replaceTask_OmittedFields_ClearsThemOnTheTask() {
+        // PUT sem title/description: full replacement deve limpar os campos, não preservá-los
+        TaskRequestDTO request = validRequest();
+
+        Task existingTask = new Task();
+        existingTask.setUser(userWithId(USER_ID));
+        existingTask.setTitle("Título antigo");
+        existingTask.setDescription("Descrição antiga");
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findById(TASK_ID)).thenReturn(Optional.of(existingTask));
+        when(repository.save(existingTask)).thenReturn(existingTask);
+        when(taskMapper.toResponse(existingTask)).thenReturn(TaskResponseDTO.builder().build());
+
+        doAnswer(invocation -> {
+            Task t = invocation.getArgument(0);
+            TaskRequestDTO r = invocation.getArgument(1);
+            t.setTitle(r.getTitle());
+            t.setDescription(r.getDescription());
+            return null;
+        }).when(taskMapper).replaceEntity(eq(existingTask), eq(request));
+
+        assertNotNull(taskService.replaceTask(request, TASK_ID));
+
+        verify(taskMapper).replaceEntity(existingTask, request);
+        verify(taskMapper, never()).updateEntity(any(), any());
+        assertEquals(null, existingTask.getTitle());
+        assertEquals(null, existingTask.getDescription());
+    }
+
+    @Test
+    void replaceTask_OmittedCategoryId_ClearsCategory() {
+        TaskRequestDTO request = validRequest();
+
+        Task existingTask = new Task();
+        existingTask.setUser(userWithId(USER_ID));
+        existingTask.setCategory(new Category());
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findById(TASK_ID)).thenReturn(Optional.of(existingTask));
+        when(repository.save(existingTask)).thenReturn(existingTask);
+        when(taskMapper.toResponse(existingTask)).thenReturn(TaskResponseDTO.builder().build());
+
+        assertNotNull(taskService.replaceTask(request, TASK_ID));
+
+        assertEquals(null, existingTask.getCategory());
+        verifyNoInteractions(categoryService);
+    }
+
+    @Test
+    void replaceTask_WithCategory_ValidatesOwnershipAndSetsCategory() {
+        TaskRequestDTO request = validRequest();
+        request.setCategoryId("cat123");
+
+        Task existingTask = new Task();
+        existingTask.setUser(userWithId(USER_ID));
+
+        Category category = new Category();
+        category.setId("cat123");
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findById(TASK_ID)).thenReturn(Optional.of(existingTask));
+        when(categoryService.getCategoryOwnedByUser("cat123", USER_ID)).thenReturn(category);
+        when(repository.save(existingTask)).thenReturn(existingTask);
+        when(taskMapper.toResponse(existingTask)).thenReturn(TaskResponseDTO.builder().build());
+
+        assertNotNull(taskService.replaceTask(request, TASK_ID));
+
+        assertEquals(category, existingTask.getCategory());
+        verify(categoryService).getCategoryOwnedByUser("cat123", USER_ID);
+    }
+
+    @Test
+    void replaceTask_Unauthorized_WhenUserIsNotOwner() {
+        TaskRequestDTO request = validRequest();
+
+        Task existingTask = new Task();
+        existingTask.setUser(userWithId(USER_ID));
+
+        mockAuthenticatedUser(userWithId("user456"));
+        when(repository.findById(TASK_ID)).thenReturn(Optional.of(existingTask));
+
+        assertThrows(AccessDeniedException.class,
+                () -> taskService.replaceTask(request, TASK_ID));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void replaceTask_InvalidDates_ThrowsIllegalArgumentException() {
+        TaskRequestDTO request = validRequest();
+        request.setStartsAt(Instant.now());
+        request.setEndsAt(Instant.now().minus(1, ChronoUnit.HOURS));
+
+        Task existingTask = new Task();
+        existingTask.setUser(userWithId(USER_ID));
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findById(TASK_ID)).thenReturn(Optional.of(existingTask));
+
+        doAnswer(invocation -> {
+            Task t = invocation.getArgument(0);
+            TaskRequestDTO r = invocation.getArgument(1);
+            t.setAllDay(r.getAllDay());
+            t.setStartsAt(r.getStartsAt());
+            t.setEndsAt(r.getEndsAt());
+            return null;
+        }).when(taskMapper).replaceEntity(eq(existingTask), eq(request));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> taskService.replaceTask(request, TASK_ID));
 
         verify(repository, never()).save(any());
     }

@@ -88,4 +88,22 @@ public class TaskMapper {
             task.setCompletedAt(request.getCompletedAt());
         }
     }
+
+    /**
+     * Full replacement (PUT semantics): every field is set from the request,
+     * including nulls — a field omitted from the request clears it on the task.
+     */
+    public void replaceEntity(Task task, TaskRequestDTO request) {
+        task.setTitle(request.getTitle());
+        task.setDescription(request.getDescription());
+        task.setTimezone(request.getTimezone());
+        task.setLocation(request.getLocation());
+        task.setStatus(request.getStatus());
+        task.setStartsAt(request.getStartsAt());
+        task.setEndsAt(request.getEndsAt());
+        task.setRepeat(request.getRepeat());
+        task.setRepeatInterval(request.getRepeatInterval());
+        task.setAllDay(request.getAllDay());
+        task.setCompletedAt(request.getCompletedAt());
+    }
 }

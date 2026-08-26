@@ -57,27 +57,54 @@ public class TaskService {
         return repository.findAll();
     }
 
-    public TaskResponseDTO updateTask(TaskRequestDTO task, String taskId) {
-        Task existingTask = repository.findById(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
-
+    /**
+     * PATCH semantics: fields omitted from the request are left unchanged.
+     */
+    public TaskResponseDTO updateTask(TaskRequestDTO request, String taskId) {
+        Task existingTask = findOwnedTask(taskId);
         User currentUser = currentUser();
 
-        if (!Objects.equals(currentUser.getId(), existingTask.getUser().getId())) {
-            throw new AccessDeniedException("Task does not belong to the current user");
+        if (request.getCategoryId() != null) {
+            existingTask.setCategory(categoryService.getCategoryOwnedByUser(request.getCategoryId(), currentUser.getId()));
         }
 
-        String categoryId = task.getCategoryId();
-        if (categoryId != null) {
-            Category category = categoryService.getCategoryOwnedByUser(categoryId, currentUser.getId());
-            existingTask.setCategory(category);
-        }
-
-        taskMapper.updateEntity(existingTask, task);
+        taskMapper.updateEntity(existingTask, request);
 
         validateTaskDates(existingTask);
 
         return taskMapper.toResponse(repository.save(existingTask));
+    }
+
+    /**
+     * PUT semantics: full replacement. Fields omitted from the request clear
+     * the corresponding value on the task, including the category.
+     */
+    public TaskResponseDTO replaceTask(TaskRequestDTO request, String taskId) {
+        Task existingTask = findOwnedTask(taskId);
+        User currentUser = currentUser();
+
+        Category category = request.getCategoryId() != null
+                ? categoryService.getCategoryOwnedByUser(request.getCategoryId(), currentUser.getId())
+                : null;
+        existingTask.setCategory(category);
+
+        taskMapper.replaceEntity(existingTask, request);
+
+        validateTaskDates(existingTask);
+
+        return taskMapper.toResponse(repository.save(existingTask));
+    }
+
+    private Task findOwnedTask(String taskId) {
+        Task task = repository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+
+        User currentUser = currentUser();
+        if (!Objects.equals(currentUser.getId(), task.getUser().getId())) {
+            throw new AccessDeniedException("Task does not belong to the current user");
+        }
+
+        return task;
     }
 
     private User currentUser() {

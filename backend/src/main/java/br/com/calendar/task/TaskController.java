@@ -52,7 +52,7 @@ public class TaskController {
 
     @PutMapping("/{id}")
     public ResponseEntity<TaskResponseDTO> replaceTask(@PathVariable String id, @RequestBody TaskRequestDTO task) {
-        return ResponseEntity.ok(service.updateTask(task, id));
+        return ResponseEntity.ok(service.replaceTask(task, id));
     }
 
     @PatchMapping("/{id}")
