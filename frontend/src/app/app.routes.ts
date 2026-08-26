@@ -2,9 +2,14 @@ import { Routes } from '@angular/router';
 
 export const routes: Routes = [
   {
-    path: 'cadastro',
+    path: 'signup',
     loadComponent: () => import('./pages/signup/signup').then((m) => m.Signup),
     title: 'Criar conta',
+  },
+  {
+    path: 'cadastro',
+    redirectTo: 'signup',
+    pathMatch: 'full',
   },
   {
     path: 'login',
@@ -14,6 +19,6 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'cadastro',
+    redirectTo: 'signup',
   },
 ];
