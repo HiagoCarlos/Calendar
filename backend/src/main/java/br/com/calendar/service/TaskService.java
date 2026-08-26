@@ -56,14 +56,9 @@ public class TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        User taskOwner = existingTask.getUser();
 
-        if (!Objects.equals(currentUser.getId(), taskOwner.getId())) {
+        if (!Objects.equals(currentUser.getId(), existingTask.getUser().getId())) {
             throw new AccessDeniedException("Task does not belong to the current user");
-        }
-
-        if (!task.getAllDay() && task.getStartsAt().isAfter(task.getEndsAt())) {
-            throw new IllegalArgumentException("Task start time must be before its end time.");
         }
 
         String categoryId = task.getCategoryId();
@@ -74,8 +69,17 @@ public class TaskService {
 
         taskMapper.updateEntity(existingTask, task);
 
-        return taskMapper.toResponse(repository.save(existingTask));
+        validateTaskDates(existingTask);
 
+        return taskMapper.toResponse(repository.save(existingTask));
     }
 
+    private void validateTaskDates(Task task) {
+        boolean allDay = Boolean.TRUE.equals(task.getAllDay());
+
+        if (!allDay && task.getStartsAt() != null && task.getEndsAt() != null
+                && task.getStartsAt().isAfter(task.getEndsAt())) {
+            throw new IllegalArgumentException("Task start time must be before its end time.");
+        }
+    }
 }
