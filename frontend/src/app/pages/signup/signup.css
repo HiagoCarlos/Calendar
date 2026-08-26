@@ -49,7 +49,8 @@
 }
 
 @keyframes floatGentleLeft {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(-2deg);
   }
   50% {
@@ -58,7 +59,8 @@
 }
 
 @keyframes floatGentleRight {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(3deg);
   }
   50% {
@@ -103,7 +105,9 @@
 
 .animate-card-left {
   animation: cardPopLeft 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s ease;
 }
 
 .animate-card-left:hover {
@@ -113,7 +117,9 @@
 
 .animate-card-right {
   animation: cardPopRight 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.38s both;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s ease;
 }
 
 .animate-card-right:hover {
@@ -126,12 +132,27 @@
 }
 
 /* Delay helpers for smooth staggered entrance */
-.delay-1 { animation-delay: 0.08s; }
-.delay-2 { animation-delay: 0.16s; }
-.delay-3 { animation-delay: 0.24s; }
-.delay-4 { animation-delay: 0.32s; }
-.delay-5 { animation-delay: 0.40s; }
-.delay-6 { animation-delay: 0.48s; }
-.delay-7 { animation-delay: 0.56s; }
-.delay-8 { animation-delay: 0.64s; }
-
+.delay-1 {
+  animation-delay: 0.08s;
+}
+.delay-2 {
+  animation-delay: 0.16s;
+}
+.delay-3 {
+  animation-delay: 0.24s;
+}
+.delay-4 {
+  animation-delay: 0.32s;
+}
+.delay-5 {
+  animation-delay: 0.4s;
+}
+.delay-6 {
+  animation-delay: 0.48s;
+}
+.delay-7 {
+  animation-delay: 0.56s;
+}
+.delay-8 {
+  animation-delay: 0.64s;
+}
