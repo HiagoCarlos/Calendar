@@ -34,7 +34,7 @@ public class TaskController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Task>> getTasksByDay(
+    public ResponseEntity<List<TaskResponseDTO>> getTasksByDay(
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(service.getTasksForDay(date));
     }
@@ -46,7 +46,7 @@ public class TaskController {
     }
 
     @GetMapping("/history")
-    public ResponseEntity<List<Task>> getTaskHistory() {
+    public ResponseEntity<List<TaskResponseDTO>> getTaskHistory() {
         return ResponseEntity.ok(service.getTaskHistory());
     }
 

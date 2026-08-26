@@ -16,6 +16,7 @@ import br.com.calendar.common.exception.ResourceNotFoundException;
 import br.com.calendar.task.dto.TaskRequestDTO;
 import br.com.calendar.task.dto.TaskResponseDTO;
 import br.com.calendar.user.User;
+import br.com.calendar.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -25,6 +26,7 @@ public class TaskService {
     private final TaskRepository repository;
     private final TaskMapper taskMapper;
     private final CategoryService categoryService;
+    private final UserRepository userRepository;
 
     public TaskResponseDTO createTask(TaskRequestDTO request) {
         User currentUser = currentUser();
@@ -42,19 +44,27 @@ public class TaskService {
         return taskMapper.toResponse(repository.save(task));
     }
 
-    public List<Task> getTasksForDay(LocalDate date) {
+    public List<TaskResponseDTO> getTasksForDay(LocalDate date) {
+        String userId = currentUser().getId();
         var startOfDay = date.atStartOfDay().toInstant(ZoneOffset.UTC);
         var endOfDay = date.atTime(LocalTime.MAX).toInstant(ZoneOffset.UTC);
-        return repository.findActiveTasksForDay(startOfDay, endOfDay);
+        return repository.findActiveTasksForDay(userId, startOfDay, endOfDay).stream()
+                .map(taskMapper::toResponse)
+                .toList();
     }
 
     public void deleteTask(String id) {
-        repository.findByIdAndDeletedAtIsNull(id)
-                .ifPresent(task -> repository.deleteById(id));
+        repository.findByIdAndDeletedAtIsNull(id).ifPresent(task -> {
+            checkOwnership(task);
+            repository.delete(task);
+        });
     }
 
-    public List<Task> getTaskHistory() {
-        return repository.findAll();
+    public List<TaskResponseDTO> getTaskHistory() {
+        String userId = currentUser().getId();
+        return repository.findAllByUser_Id(userId).stream()
+                .map(taskMapper::toResponse)
+                .toList();
     }
 
     /**
@@ -99,16 +109,27 @@ public class TaskService {
         Task task = repository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        User currentUser = currentUser();
-        if (!Objects.equals(currentUser.getId(), task.getUser().getId())) {
-            throw new AccessDeniedException("Task does not belong to the current user");
-        }
+        checkOwnership(task);
 
         return task;
     }
 
+    private void checkOwnership(Task task) {
+        User currentUser = currentUser();
+        if (!Objects.equals(currentUser.getId(), task.getUser().getId())) {
+            throw new AccessDeniedException("Task does not belong to the current user");
+        }
+    }
+
+    /**
+     * The JwtFilter authenticates with a Spring Security UserDetails, not our
+     * domain User — the authenticated user's id is its name/username, not
+     * its principal, so it must be looked up.
+     */
     private User currentUser() {
-        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     private void validateTaskDates(Task task) {

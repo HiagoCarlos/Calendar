@@ -13,7 +13,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +35,7 @@ import br.com.calendar.common.exception.ResourceNotFoundException;
 import br.com.calendar.task.dto.TaskRequestDTO;
 import br.com.calendar.task.dto.TaskResponseDTO;
 import br.com.calendar.user.User;
+import br.com.calendar.user.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
@@ -43,6 +46,8 @@ class TaskServiceTest {
     private TaskMapper taskMapper;
     @Mock
     private CategoryService categoryService;
+    @Mock
+    private UserRepository userRepository;
     @Mock
     private SecurityContext securityContext;
     @Mock
@@ -75,7 +80,8 @@ class TaskServiceTest {
 
     private void mockAuthenticatedUser(User user) {
         when(securityContext.getAuthentication()).thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(user);
+        when(authentication.getName()).thenReturn(user.getId());
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
     }
 
     @Test
@@ -448,5 +454,71 @@ class TaskServiceTest {
                 () -> taskService.replaceTask(request, TASK_ID));
 
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void getTasksForDay_ScopesByCurrentUser() {
+        mockAuthenticatedUser(userWithId(USER_ID));
+
+        Task task = new Task();
+        task.setUser(userWithId(USER_ID));
+        when(repository.findActiveTasksForDay(eq(USER_ID), any(), any())).thenReturn(List.of(task));
+        when(taskMapper.toResponse(task)).thenReturn(TaskResponseDTO.builder().build());
+
+        List<TaskResponseDTO> result = taskService.getTasksForDay(LocalDate.of(2026, 8, 27));
+
+        assertEquals(1, result.size());
+        verify(repository).findActiveTasksForDay(eq(USER_ID), any(), any());
+    }
+
+    @Test
+    void getTaskHistory_ScopesByCurrentUser() {
+        mockAuthenticatedUser(userWithId(USER_ID));
+
+        Task task = new Task();
+        task.setUser(userWithId(USER_ID));
+        when(repository.findAllByUser_Id(USER_ID)).thenReturn(List.of(task));
+        when(taskMapper.toResponse(task)).thenReturn(TaskResponseDTO.builder().build());
+
+        List<TaskResponseDTO> result = taskService.getTaskHistory();
+
+        assertEquals(1, result.size());
+        verify(repository).findAllByUser_Id(USER_ID);
+    }
+
+    @Test
+    void deleteTask_Success_WhenOwner() {
+        Task existingTask = new Task();
+        existingTask.setUser(userWithId(USER_ID));
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findByIdAndDeletedAtIsNull(TASK_ID)).thenReturn(Optional.of(existingTask));
+
+        taskService.deleteTask(TASK_ID);
+
+        verify(repository).delete(existingTask);
+    }
+
+    @Test
+    void deleteTask_Unauthorized_WhenUserIsNotOwner() {
+        Task existingTask = new Task();
+        existingTask.setUser(userWithId(USER_ID));
+
+        mockAuthenticatedUser(userWithId("user456"));
+        when(repository.findByIdAndDeletedAtIsNull(TASK_ID)).thenReturn(Optional.of(existingTask));
+
+        assertThrows(AccessDeniedException.class, () -> taskService.deleteTask(TASK_ID));
+
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    void deleteTask_NoOp_WhenTaskNotFound() {
+        when(repository.findByIdAndDeletedAtIsNull(TASK_ID)).thenReturn(Optional.empty());
+
+        assertDoesNotThrow(() -> taskService.deleteTask(TASK_ID));
+
+        verify(repository, never()).delete(any());
+        verifyNoInteractions(userRepository);
     }
 }
