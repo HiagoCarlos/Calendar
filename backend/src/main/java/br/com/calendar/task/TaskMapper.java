@@ -50,6 +50,7 @@ public class TaskMapper {
                 .createdAt(task.getCreatedAt())
                 .updatedAt(task.getUpdatedAt())
                 .completedAt(task.getCompletedAt())
+                .deletedAt(task.getDeletedAt())
                 .build();
     }
 

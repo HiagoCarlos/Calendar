@@ -40,4 +40,6 @@ public class TaskResponseDTO {
     private Instant updatedAt;
 
     private Instant completedAt;
+
+    private Instant deletedAt;
 }
