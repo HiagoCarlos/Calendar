@@ -46,8 +46,8 @@ public class TaskService {
         return repository.findAll();
     }
 
-    public TaskResponseDTO updateTask(TaskRequestDTO task, String TaskId) {
-        Task existingTask = repository.findById(TaskId)
+    public TaskResponseDTO updateTask(TaskRequestDTO task, String taskId) {
+        Task existingTask = repository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         taskMapper.updateEntity(existingTask, task);
