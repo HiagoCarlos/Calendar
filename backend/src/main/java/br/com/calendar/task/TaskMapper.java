@@ -1,10 +1,10 @@
-package br.com.calendar.domain;
+package br.com.calendar.task;
 
 import org.springframework.stereotype.Component;
 
 import br.com.calendar.category.Category;
-import br.com.calendar.domain.dto.TaskRequestDTO;
-import br.com.calendar.domain.dto.TaskResponseDTO;
+import br.com.calendar.task.dto.TaskRequestDTO;
+import br.com.calendar.task.dto.TaskResponseDTO;
 import lombok.RequiredArgsConstructor;
 
 @Component

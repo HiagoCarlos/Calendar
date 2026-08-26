@@ -1,13 +1,17 @@
-package br.com.calendar.domain.dto;
+package br.com.calendar.task.dto;
 
 import java.time.Instant;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class TaskRequestDTO {
+@Builder
+public class TaskResponseDTO {
+
+    private String id;
 
     private String title;
 
@@ -30,6 +34,10 @@ public class TaskRequestDTO {
     private Boolean allDay;
 
     private String categoryId;
+
+    private Instant createdAt;
+
+    private Instant updatedAt;
 
     private Instant completedAt;
 }
