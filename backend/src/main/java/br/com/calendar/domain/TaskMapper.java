@@ -3,8 +3,6 @@ package br.com.calendar.domain;
 import org.springframework.stereotype.Component;
 
 import br.com.calendar.category.Category;
-import br.com.calendar.category.CategoryRepository;
-import br.com.calendar.common.exception.ResourceNotFoundException;
 import br.com.calendar.domain.dto.TaskRequestDTO;
 import br.com.calendar.domain.dto.TaskResponseDTO;
 import lombok.RequiredArgsConstructor;
@@ -13,9 +11,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TaskMapper {
 
-    private final CategoryRepository categoryRepository;
-
-    public Task toEntity(TaskRequestDTO request) {
+    public Task toEntity(TaskRequestDTO request, Category category) {
         Task task = new Task();
 
         task.setTitle(request.getTitle());
@@ -29,13 +25,8 @@ public class TaskMapper {
         task.setRepeatInterval(request.getRepeatInterval());
         task.setAllDay(request.getAllDay());
         task.setCompletedAt(request.getCompletedAt());
-        
-        if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
-            task.setCategory(category);
-        }
-        
+        task.setCategory(category);
+
         return task;
     }
 
@@ -95,11 +86,6 @@ public class TaskMapper {
         }
         if (request.getCompletedAt() != null) {
             task.setCompletedAt(request.getCompletedAt());
-        }
-        if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
-            task.setCategory(category);
         }
     }
 }
