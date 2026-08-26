@@ -1,4 +1,4 @@
-package br.com.calendar.service;
+package br.com.calendar.task;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -13,11 +13,8 @@ import org.springframework.stereotype.Service;
 import br.com.calendar.category.Category;
 import br.com.calendar.category.CategoryService;
 import br.com.calendar.common.exception.ResourceNotFoundException;
-import br.com.calendar.domain.Task;
-import br.com.calendar.domain.TaskMapper;
-import br.com.calendar.domain.TaskRepository;
-import br.com.calendar.domain.dto.TaskRequestDTO;
-import br.com.calendar.domain.dto.TaskResponseDTO;
+import br.com.calendar.task.dto.TaskRequestDTO;
+import br.com.calendar.task.dto.TaskResponseDTO;
 import br.com.calendar.user.User;
 import lombok.RequiredArgsConstructor;
 
