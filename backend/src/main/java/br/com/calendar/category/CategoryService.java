@@ -21,14 +21,14 @@ public class CategoryService {
 
     @Transactional(readOnly = true)
     public List<CategoryResponseDTO> getCategories(String userId) {
-        return categoryRepository.findAllByUser_Id(userId).stream()
+        return categoryRepository.findAllByUser_IdAndDeletedAtIsNull(userId).stream()
                 .map(categoryMapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public Category getCategoryOwnedByUser(String categoryId, String userId) {
-        return categoryRepository.findByIdAndUser_Id(categoryId, userId)
+        return categoryRepository.findByIdAndUser_IdAndDeletedAtIsNull(categoryId, userId)
                 .orElseThrow(() -> new AccessDeniedException("Category does not belong to the current user"));
     }
 }

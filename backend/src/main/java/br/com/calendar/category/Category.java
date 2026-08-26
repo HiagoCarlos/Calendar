@@ -12,12 +12,16 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.annotations.SQLDelete;
+
+import java.time.Instant;
 
 @Getter
 @Setter
 @ToString
 @Entity
 @Table(name = "category")
+@SQLDelete(sql = "UPDATE category SET deleted_at = now() WHERE id = ?")
 public class Category extends BaseEntity {
 
     @ToString.Exclude
@@ -32,4 +36,7 @@ public class Category extends BaseEntity {
 
     @Column(length = 255)
     private String icon;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 }

@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CategoryRepository extends JpaRepository<Category, String> {
 
-    List<Category> findAllByUser_Id(String userId);
+    List<Category> findAllByUser_IdAndDeletedAtIsNull(String userId);
 
-    Optional<Category> findByIdAndUser_Id(String categoryId, String userId);
+    Optional<Category> findByIdAndUser_IdAndDeletedAtIsNull(String categoryId, String userId);
 
 }
