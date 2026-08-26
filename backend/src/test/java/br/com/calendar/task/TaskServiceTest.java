@@ -78,6 +78,77 @@ class TaskServiceTest {
     }
 
     @Test
+    void createTask_Success() {
+        TaskRequestDTO request = validRequest();
+
+        Task mappedTask = new Task();
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(taskMapper.toEntity(request, null)).thenReturn(mappedTask);
+        when(repository.save(mappedTask)).thenReturn(mappedTask);
+        when(taskMapper.toResponse(mappedTask)).thenReturn(TaskResponseDTO.builder().build());
+
+        assertNotNull(taskService.createTask(request));
+
+        assertEquals(USER_ID, mappedTask.getUser().getId());
+        verify(repository).save(mappedTask);
+    }
+
+    @Test
+    void createTask_InvalidDates_ThrowsIllegalArgumentException() {
+        TaskRequestDTO request = validRequest();
+        request.setStartsAt(Instant.now());
+        request.setEndsAt(Instant.now().minus(1, ChronoUnit.HOURS));
+
+        Task mappedTask = new Task();
+        mappedTask.setAllDay(request.getAllDay());
+        mappedTask.setStartsAt(request.getStartsAt());
+        mappedTask.setEndsAt(request.getEndsAt());
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(taskMapper.toEntity(request, null)).thenReturn(mappedTask);
+
+        assertThrows(IllegalArgumentException.class, () -> taskService.createTask(request));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void createTask_WithCategory_ValidatesOwnershipAndSetsCategory() {
+        TaskRequestDTO request = validRequest();
+        request.setCategoryId("cat123");
+
+        Category category = new Category();
+        category.setId("cat123");
+
+        Task mappedTask = new Task();
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(categoryService.getCategoryOwnedByUser("cat123", USER_ID)).thenReturn(category);
+        when(taskMapper.toEntity(request, category)).thenReturn(mappedTask);
+        when(repository.save(mappedTask)).thenReturn(mappedTask);
+        when(taskMapper.toResponse(mappedTask)).thenReturn(TaskResponseDTO.builder().build());
+
+        assertNotNull(taskService.createTask(request));
+
+        verify(categoryService).getCategoryOwnedByUser("cat123", USER_ID);
+    }
+
+    @Test
+    void createTask_CategoryNotOwnedByUser_ThrowsAccessDenied() {
+        TaskRequestDTO request = validRequest();
+        request.setCategoryId("cat999");
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(categoryService.getCategoryOwnedByUser("cat999", USER_ID))
+                .thenThrow(new AccessDeniedException("Category does not belong to the current user"));
+
+        assertThrows(AccessDeniedException.class, () -> taskService.createTask(request));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
     void updateTask_Success() {
         TaskRequestDTO request = validRequest();
 

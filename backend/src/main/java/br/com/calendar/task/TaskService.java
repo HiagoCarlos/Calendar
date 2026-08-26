@@ -26,11 +26,20 @@ public class TaskService {
     private final TaskMapper taskMapper;
     private final CategoryService categoryService;
 
-    public Task createTask(Task task) {
-        // Get the currently authenticated user from the security context
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    public TaskResponseDTO createTask(TaskRequestDTO request) {
+        User currentUser = currentUser();
+
+        Category category = null;
+        if (request.getCategoryId() != null) {
+            category = categoryService.getCategoryOwnedByUser(request.getCategoryId(), currentUser.getId());
+        }
+
+        Task task = taskMapper.toEntity(request, category);
         task.setUser(currentUser);
-        return repository.save(task);
+
+        validateTaskDates(task);
+
+        return taskMapper.toResponse(repository.save(task));
     }
 
     public List<Task> getTasksForDay(LocalDate date) {
@@ -52,7 +61,7 @@ public class TaskService {
         Task existingTask = repository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
-        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User currentUser = currentUser();
 
         if (!Objects.equals(currentUser.getId(), existingTask.getUser().getId())) {
             throw new AccessDeniedException("Task does not belong to the current user");
@@ -69,6 +78,10 @@ public class TaskService {
         validateTaskDates(existingTask);
 
         return taskMapper.toResponse(repository.save(existingTask));
+    }
+
+    private User currentUser() {
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
     private void validateTaskDates(Task task) {
