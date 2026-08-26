@@ -1,4 +1,4 @@
-package br.com.calendar.domain;
+package br.com.calendar.notification;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

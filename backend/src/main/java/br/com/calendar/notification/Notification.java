@@ -1,4 +1,4 @@
-package br.com.calendar.domain;
+package br.com.calendar.notification;
 
 import br.com.calendar.common.BaseEntity;
 import br.com.calendar.task.Task;
