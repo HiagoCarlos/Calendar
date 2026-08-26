@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,7 +21,6 @@ import br.com.calendar.domain.dto.TaskResponseDTO;
 import br.com.calendar.service.TaskService;
 import lombok.AllArgsConstructor;
 
-
 @RestController
 @RequestMapping("/tasks")
 @AllArgsConstructor
@@ -28,11 +28,9 @@ public class TaskController {
 
     private final TaskService service;
 
-
     @GetMapping
     public ResponseEntity<List<Task>> getTasksByDay(
-        @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
-    ) {
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(service.getTasksForDay(date));
     }
 
@@ -46,10 +44,14 @@ public class TaskController {
     public ResponseEntity<List<Task>> getTaskHistory() {
         return ResponseEntity.ok(service.getTaskHistory());
     }
-    
+
+    @PutMapping("/{id}")
+    public ResponseEntity<TaskResponseDTO> replaceTask(@PathVariable String id, @RequestBody TaskRequestDTO task) {
+        return ResponseEntity.ok(service.updateTask(task, id));
+    }
+
     @PatchMapping("/{id}")
-    public ResponseEntity<TaskResponseDTO> updateTask(@PathVariable String id, @RequestBody TaskRequestDTO task) {
-        TaskResponseDTO updatedTask = service.updateTask(task, id);
-        return ResponseEntity.ok(updatedTask);
+    public ResponseEntity<TaskResponseDTO> patchTask(@PathVariable String id, @RequestBody TaskRequestDTO task) {
+        return ResponseEntity.ok(service.updateTask(task, id));
     }
 }
