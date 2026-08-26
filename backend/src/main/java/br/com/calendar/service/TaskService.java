@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -52,8 +53,9 @@ public class TaskService {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User taskOwner = existingTask.getUser();
 
-        if (currentUser.getId() != existingTask.getUser().getId()) {
+        if (!Objects.equals(currentUser.getId(), taskOwner.getId())) {
             throw new AccessDeniedException("Task does not belong to the current user");
         }
 
@@ -62,4 +64,5 @@ public class TaskService {
         return taskMapper.toResponse(repository.save(existingTask));
 
     }
+    
 }
