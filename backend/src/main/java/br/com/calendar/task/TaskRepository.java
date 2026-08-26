@@ -13,9 +13,11 @@ public interface TaskRepository extends JpaRepository<Task, String> {
 
     Optional<Task> findByIdAndDeletedAtIsNull(String id);
 
+    List<Task> findAllByUser_Id(String userId);
+
 
     @Query("SELECT t FROM Task t" +
-            " WHERE t.deletedAt IS NULL AND t.startsAt BETWEEN :start AND :end" +
+            " WHERE t.user.id = :userId AND t.deletedAt IS NULL AND t.startsAt BETWEEN :start AND :end" +
             " ORDER BY t.startsAt")
-    List<Task> findActiveTasksForDay(@Param("start") Instant start, @Param("end") Instant end);
+    List<Task> findActiveTasksForDay(@Param("userId") String userId, @Param("start") Instant start, @Param("end") Instant end);
 }
