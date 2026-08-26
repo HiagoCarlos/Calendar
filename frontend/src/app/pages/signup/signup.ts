@@ -1,13 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import {
-  LucideCalendarDays,
-  LucideCircleCheck,
-  LucideLockKeyhole,
-  LucideMail,
-  LucideUser,
-  LucideZap,
-} from '@lucide/angular';
 import {
   AbstractControl,
   FormBuilder,
@@ -17,11 +9,10 @@ import {
   Validators,
 } from '@angular/forms';
 
-type SignupField = 'name' | 'email' | 'password' | 'password_confirmation' | 'terms';
+export type SignupField = 'name' | 'email' | 'password' | 'password_confirmation' | 'terms';
 
 /**
- * Group-level validator that checks `password_confirmation` matches `password`.
- * Runs on the FormGroup (not a single control) since it needs to compare two fields.
+ * Group-level validator to ensure password and confirmation match.
  */
 function passwordsMatchValidator(): ValidatorFn {
   return (group: AbstractControl): ValidationErrors | null => {
@@ -36,35 +27,22 @@ function passwordsMatchValidator(): ValidatorFn {
   };
 }
 
-/**
- * Signup screen (route: /cadastro).
- *
- * UI-only for now: it builds and validates the form locally but does not call
- * the backend yet. API integration is tracked as a separate issue.
- */
 @Component({
   selector: 'app-signup',
   standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    RouterLink,
-    LucideCalendarDays,
-    LucideCircleCheck,
-    LucideLockKeyhole,
-    LucideMail,
-    LucideUser,
-    LucideZap,
-  ],
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './signup.html',
   styleUrl: './signup.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Signup {
-  private readonly formBuilder = inject(FormBuilder);
+  private readonly fb = inject(FormBuilder).nonNullable;
 
-  /** Set to true on the first submit attempt, so errors can surface even on untouched fields. */
+  /** Signal tracking form submission attempts. */
   protected readonly submitted = signal(false);
 
-  protected readonly form = this.formBuilder.group(
+  /** Strongly typed reactive signup form. */
+  protected readonly form = this.fb.group(
     {
       name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
@@ -75,7 +53,7 @@ export class Signup {
     { validators: passwordsMatchValidator() },
   );
 
-  /** Whether a given field's error message should currently be shown. */
+  /** Helper method to check if a specific error message should be displayed. */
   protected showError(field: SignupField, errorCode: string): boolean {
     const control = this.form.get(field);
     if (!control) {
@@ -99,7 +77,6 @@ export class Signup {
       return;
     }
 
-    // NOTE: API integration is out of scope for this screen (see issue description).
-    // Hook the signup request up here once the endpoint is available.
+    // Hook API call here when backend registration endpoint is integrated
   }
 }

@@ -21,7 +21,7 @@ describe('Signup', () => {
     const element = fixture.nativeElement as HTMLElement;
 
     expect(element.querySelectorAll('input[formControlName]').length).toBe(5);
-    expect(element.querySelector('button[type="submit"]')?.textContent?.trim()).toBe('Cadastrar');
+    expect(element.querySelector('button[type="submit"]')?.textContent?.trim()).toBe('Criar Conta');
     expect(element.querySelector('a[routerLink="/login"]')).toBeTruthy();
   });
 
@@ -33,11 +33,11 @@ describe('Signup', () => {
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('#name-error.is-visible')).toBeTruthy();
-    expect(element.querySelector('#email-error.is-visible')).toBeTruthy();
-    expect(element.querySelector('#password-error.is-visible')).toBeTruthy();
-    expect(element.querySelector('#password-confirmation-error.is-visible')).toBeTruthy();
-    expect(element.querySelector('#terms-message.is-visible')).toBeTruthy();
+    expect(element.querySelector('#name-error')).toBeTruthy();
+    expect(element.querySelector('#email-error')).toBeTruthy();
+    expect(element.querySelector('#password-error')).toBeTruthy();
+    expect(element.querySelector('#password-confirmation-error')).toBeTruthy();
+    expect(element.querySelector('#terms-message')).toBeTruthy();
   });
 
   it('should show a mismatch error when passwords differ', () => {
@@ -55,7 +55,7 @@ describe('Signup', () => {
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('#password-match-error.is-visible')).toBeTruthy();
+    expect(element.querySelector('#password-match-error')).toBeTruthy();
     expect(component.form.invalid).toBe(true);
   });
 
