@@ -11,6 +11,7 @@ Thank you to everyone who has contributed to this project ❤️
 | Name         | Role                         | Site/Profile               |
 |--------------|------------------------------|----------------------------|
 | Flávio Pavim | Project Creator & Maintainer | https://flaviopavim.com.br |
+| Wendy Oliveira Konrath | Tech Lead (Backend) | https://www.linkedin.com/in/wendykonrath/ |
 
 ## Contributors
 
@@ -23,6 +24,7 @@ Contributors will be added here after their first accepted Pull Request.
 | Maria Giulia E. Dineli               | Backlog         | https://linkedin.com/in/maria-giulia-elias-dineli-73861921a/ |
 | Marcelo Luiz Pinotti da Silva Junior | Backend & CI    | https://www.linkedin.com/in/marcelo-pinotti/ |
 | Murilo Souza C                       | Frontend Angular | https://github.com/murilotecoteco |
+| Wendy Oliveira Konrath               | Backend         | https://www.linkedin.com/in/wendykonrath/ |
 
 ---
 
@@ -35,6 +37,7 @@ Obrigado a todos que contribuíram com este projeto ❤️
 | Nome         | Função               | Site/Perfil                |
 |--------------|----------------------|----------------------------|
 | Flávio Pavim | Criador e Mantenedor | https://flaviopavim.com.br |
+| Wendy Oliveira Konrath | Tech Lead (Backend) | https://www.linkedin.com/in/wendykonrath/ |
 
 ## Colaboradores
 
@@ -47,3 +50,4 @@ Os colaboradores serão adicionados aqui após o primeiro Pull Request aceito.
 | Maria Giulia E. Dineli               | Backlog         | https://linkedin.com/in/maria-giulia-elias-dineli-73861921a/ |
 | Marcelo Luiz Pinotti da Silva Junior | Backend & CI    | https://www.linkedin.com/in/marcelo-pinotti/ |
 | Murilo Souza C                       | Frontend Angular | https://github.com/murilotecoteco |
+| Wendy Oliveira Konrath               | Backend         | https://www.linkedin.com/in/wendykonrath/ |
