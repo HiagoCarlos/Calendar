@@ -34,11 +34,11 @@ class TaskMapperTest {
     void toEntity_MapsPriority() {
         TaskRequestDTO request = new TaskRequestDTO();
         request.setTitle("Task");
-        request.setPriority(TaskPriority.high);
+        request.setPriority(TaskPriority.HIGH);
 
         Task task = mapper.toEntity(request, null);
 
-        assertEquals(TaskPriority.high, task.getPriority());
+        assertEquals(TaskPriority.HIGH, task.getPriority());
     }
 
     @Test
@@ -56,39 +56,39 @@ class TaskMapperTest {
     @Test
     void toResponse_MapsPriority() {
         Task task = new Task();
-        task.setPriority(TaskPriority.medium);
+        task.setPriority(TaskPriority.MEDIUM);
 
         TaskResponseDTO response = mapper.toResponse(task);
 
-        assertEquals(TaskPriority.medium, response.getPriority());
+        assertEquals(TaskPriority.MEDIUM, response.getPriority());
     }
 
     @Test
     void updateEntity_OmittedPriority_LeavesItUnchanged() {
         Task task = new Task();
-        task.setPriority(TaskPriority.low);
+        task.setPriority(TaskPriority.LOW);
 
         mapper.updateEntity(task, new TaskRequestDTO());
 
-        assertEquals(TaskPriority.low, task.getPriority());
+        assertEquals(TaskPriority.LOW, task.getPriority());
     }
 
     @Test
     void updateEntity_SetPriority_UpdatesIt() {
         Task task = new Task();
-        task.setPriority(TaskPriority.low);
+        task.setPriority(TaskPriority.LOW);
 
         TaskRequestDTO request = new TaskRequestDTO();
-        request.setPriority(TaskPriority.high);
+        request.setPriority(TaskPriority.HIGH);
         mapper.updateEntity(task, request);
 
-        assertEquals(TaskPriority.high, task.getPriority());
+        assertEquals(TaskPriority.HIGH, task.getPriority());
     }
 
     @Test
     void replaceEntity_OmittedPriority_ClearsIt() {
         Task task = new Task();
-        task.setPriority(TaskPriority.low);
+        task.setPriority(TaskPriority.LOW);
 
         mapper.replaceEntity(task, new TaskRequestDTO());
 
