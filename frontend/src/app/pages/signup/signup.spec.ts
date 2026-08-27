@@ -1,4 +1,6 @@
 import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Signup } from './signup';
 
@@ -6,7 +8,7 @@ describe('Signup', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Signup],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
   });
 
@@ -72,5 +74,49 @@ describe('Signup', () => {
     });
 
     expect(component.form.valid).toBe(true);
+  });
+
+  it('should toggle password field types between password and text', () => {
+    const fixture = createComponent();
+    const element = fixture.nativeElement as HTMLElement;
+    const passwordInput = element.querySelector('#password') as HTMLInputElement;
+    const confirmationInput = element.querySelector('#password_confirmation') as HTMLInputElement;
+    const toggleCheckbox = element.querySelector('#show-password-toggle') as HTMLInputElement;
+
+    expect(passwordInput.type).toBe('password');
+    expect(confirmationInput.type).toBe('password');
+
+    toggleCheckbox.click();
+    fixture.detectChanges();
+
+    expect(passwordInput.type).toBe('text');
+    expect(confirmationInput.type).toBe('text');
+  });
+
+  it('should reject emojis in name, email, and password fields', () => {
+    const fixture = createComponent();
+    const component = fixture.componentInstance as any;
+
+    component.form.setValue({
+      name: '😂😂😂😂😂',
+      email: 'user@example.com',
+      password: 'password123',
+      password_confirmation: 'password123',
+      terms: true,
+    });
+    expect(component.form.get('name')?.hasError('pattern')).toBe(true);
+
+    component.form.patchValue({
+      name: 'José de Alencar',
+      email: 'emoji😍@example.com',
+    });
+    expect(component.form.get('name')?.valid).toBe(true);
+    expect(component.form.get('email')?.hasError('pattern')).toBe(true);
+
+    component.form.patchValue({
+      email: 'valid@example.com',
+      password: 'password123😁',
+    });
+    expect(component.form.get('password')?.hasError('pattern')).toBe(true);
   });
 });

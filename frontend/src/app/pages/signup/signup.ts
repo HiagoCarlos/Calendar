@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   AbstractControl,
   FormBuilder,
@@ -8,8 +8,25 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
+import { AuthService } from '../../core/services/auth.service';
 
 export type SignupField = 'name' | 'email' | 'password' | 'password_confirmation' | 'terms';
+
+/**
+ * Name regex: allows letters (including Portuguese accents), spaces, hyphens, and apostrophes.
+ * Rejects emojis, numbers, and special symbols.
+ */
+export const NAME_PATTERN = /^[a-zA-ZÀ-ÖØ-öø-ÿ\s'-]+$/;
+
+/**
+ * Standard email regex: prevents emojis and non-standard symbols.
+ */
+export const EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+/**
+ * Password pattern: printable ASCII characters only (letters, numbers, symbols, no emojis).
+ */
+export const PASSWORD_PATTERN = /^[\x20-\x7E]+$/;
 
 /**
  * Group-level validator to ensure password and confirmation match.
@@ -37,16 +54,33 @@ function passwordsMatchValidator(): ValidatorFn {
 })
 export class Signup {
   private readonly fb = inject(FormBuilder).nonNullable;
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   /** Signal tracking form submission attempts. */
   protected readonly submitted = signal(false);
 
+  /** Signal tracking async loading state during signup request. */
+  protected readonly isLoading = signal(false);
+
+  /** Signal tracking API error message to display. */
+  protected readonly apiError = signal<string | null>(null);
+
+  /** Signal tracking success message to display. */
+  protected readonly successMessage = signal<string | null>(null);
+
+  /** Signal tracking visibility toggle for password fields. */
+  protected readonly showPassword = signal(false);
+
   /** Strongly typed reactive signup form. */
   protected readonly form = this.fb.group(
     {
-      name: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      name: ['', [Validators.required, Validators.minLength(2), Validators.pattern(NAME_PATTERN)]],
+      email: ['', [Validators.required, Validators.email, Validators.pattern(EMAIL_PATTERN)]],
+      password: [
+        '',
+        [Validators.required, Validators.minLength(8), Validators.pattern(PASSWORD_PATTERN)],
+      ],
       password_confirmation: ['', [Validators.required]],
       terms: [false, [Validators.requiredTrue]],
     },
@@ -69,14 +103,56 @@ export class Signup {
     return shouldEvaluate && control.hasError(errorCode);
   }
 
+  protected toggleShowPassword(): void {
+    this.showPassword.update((val) => !val);
+  }
+
   protected onSubmit(): void {
     this.submitted.set(true);
+    this.apiError.set(null);
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
-    // Hook API call here when backend registration endpoint is integrated
+    const raw = this.form.getRawValue();
+    const sanitizedName = raw.name.trim().replace(/\s+/g, ' ');
+    const sanitizedEmail = raw.email.trim().toLowerCase();
+
+    this.isLoading.set(true);
+
+    this.authService
+      .signup({
+        name: sanitizedName,
+        email: sanitizedEmail,
+        password: raw.password,
+      })
+      .subscribe({
+        next: (res) => {
+          this.isLoading.set(false);
+          this.successMessage.set('Cadastro realizado com sucesso! Redirecionando...');
+
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('access_token', res.accessToken);
+          }
+
+          setTimeout(() => {
+            this.router.navigate(['/login']);
+          }, 1500);
+        },
+        error: (err) => {
+          this.isLoading.set(false);
+          if (err.status === 400) {
+            this.apiError.set(
+              'Não foi possível concluir o cadastro. Verifique os dados ou se este e-mail já está cadastrado.',
+            );
+          } else {
+            this.apiError.set(
+              'Ocorreu um erro ao conectar ao servidor. Tente novamente mais tarde.',
+            );
+          }
+        },
+      });
   }
 }
