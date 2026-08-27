@@ -314,9 +314,6 @@
                 formControlName="password"
                 autocomplete="new-password"
                 placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                (paste)="$event.preventDefault()"
-                (copy)="$event.preventDefault()"
-                (cut)="$event.preventDefault()"
                 class="w-full text-sm text-gray-900 outline-none bg-transparent placeholder:text-gray-400 tracking-wider"
                 [attr.aria-invalid]="
                   showError('password', 'required') ||
@@ -390,9 +387,6 @@
                 formControlName="password_confirmation"
                 autocomplete="new-password"
                 placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                (paste)="$event.preventDefault()"
-                (copy)="$event.preventDefault()"
-                (cut)="$event.preventDefault()"
                 class="w-full text-sm text-gray-900 outline-none bg-transparent placeholder:text-gray-400 tracking-wider"
                 [attr.aria-invalid]="
                   showError('password_confirmation', 'required') ||
