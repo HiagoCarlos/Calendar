@@ -29,6 +29,8 @@ public class TaskService {
     private final UserRepository userRepository;
 
     public TaskResponseDTO createTask(TaskRequestDTO request) {
+        validateRequiredFields(request);
+
         User currentUser = currentUser();
 
         Category category = null;
@@ -130,6 +132,20 @@ public class TaskService {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    /**
+     * Only enforced on create — title/startsAt are required to create a
+     * task, but PATCH/PUT reuse the same TaskRequestDTO and must still allow
+     * omitting them (partial update / clearing a field).
+     */
+    private void validateRequiredFields(TaskRequestDTO request) {
+        if (request.getTitle() == null || request.getTitle().isBlank()) {
+            throw new IllegalArgumentException("Title is required.");
+        }
+        if (request.getStartsAt() == null) {
+            throw new IllegalArgumentException("Start time is required.");
+        }
     }
 
     private void validateTaskDates(Task task) {

@@ -2,6 +2,7 @@ package br.com.calendar.task.dto;
 
 import java.time.Instant;
 
+import br.com.calendar.task.TaskPriority;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -32,4 +33,6 @@ public class TaskRequestDTO {
     private String categoryId;
 
     private Instant completedAt;
+
+    private TaskPriority priority;
 }

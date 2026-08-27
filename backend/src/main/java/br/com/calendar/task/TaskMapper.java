@@ -24,8 +24,11 @@ public class TaskMapper {
         task.setRepeat(request.getRepeat());
         task.setRepeatInterval(request.getRepeatInterval());
         task.setAllDay(request.getAllDay());
-        task.setCompletedAt(request.getCompletedAt());
+        task.setPriority(request.getPriority());
         task.setCategory(category);
+        // completedAt is intentionally not copied from the request here: a
+        // newly created task must always start incomplete, regardless of
+        // what the client sends.
 
         return task;
     }
@@ -51,6 +54,7 @@ public class TaskMapper {
                 .updatedAt(task.getUpdatedAt())
                 .completedAt(task.getCompletedAt())
                 .deletedAt(task.getDeletedAt())
+                .priority(task.getPriority())
                 .build();
     }
 
@@ -88,6 +92,9 @@ public class TaskMapper {
         if (request.getCompletedAt() != null) {
             task.setCompletedAt(request.getCompletedAt());
         }
+        if (request.getPriority() != null) {
+            task.setPriority(request.getPriority());
+        }
     }
 
     /**
@@ -106,5 +113,6 @@ public class TaskMapper {
         task.setRepeatInterval(request.getRepeatInterval());
         task.setAllDay(request.getAllDay());
         task.setCompletedAt(request.getCompletedAt());
+        task.setPriority(request.getPriority());
     }
 }

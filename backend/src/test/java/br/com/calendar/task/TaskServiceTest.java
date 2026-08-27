@@ -66,6 +66,7 @@ class TaskServiceTest {
 
     private TaskRequestDTO validRequest() {
         TaskRequestDTO request = new TaskRequestDTO();
+        request.setTitle("Task");
         request.setAllDay(false);
         request.setStartsAt(Instant.now());
         request.setEndsAt(Instant.now().plus(1, ChronoUnit.HOURS));
@@ -99,6 +100,36 @@ class TaskServiceTest {
 
         assertEquals(USER_ID, mappedTask.getUser().getId());
         verify(repository).save(mappedTask);
+    }
+
+    @Test
+    void createTask_MissingTitle_ThrowsIllegalArgumentException() {
+        TaskRequestDTO request = validRequest();
+        request.setTitle(null);
+
+        assertThrows(IllegalArgumentException.class, () -> taskService.createTask(request));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void createTask_BlankTitle_ThrowsIllegalArgumentException() {
+        TaskRequestDTO request = validRequest();
+        request.setTitle("   ");
+
+        assertThrows(IllegalArgumentException.class, () -> taskService.createTask(request));
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void createTask_MissingStartsAt_ThrowsIllegalArgumentException() {
+        TaskRequestDTO request = validRequest();
+        request.setStartsAt(null);
+
+        assertThrows(IllegalArgumentException.class, () -> taskService.createTask(request));
+
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -343,7 +374,9 @@ class TaskServiceTest {
     @Test
     void replaceTask_OmittedFields_ClearsThemOnTheTask() {
         // PUT sem title/description: full replacement deve limpar os campos, não preservá-los
+        // (title is only required on create, PUT/PATCH may omit/clear it)
         TaskRequestDTO request = validRequest();
+        request.setTitle(null);
 
         Task existingTask = new Task();
         existingTask.setUser(userWithId(USER_ID));
