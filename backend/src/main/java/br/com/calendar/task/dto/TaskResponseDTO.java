@@ -1,7 +1,8 @@
-package br.com.calendar.domain.dto;
+package br.com.calendar.task.dto;
 
 import java.time.Instant;
 
+import br.com.calendar.task.TaskPriority;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -40,4 +41,8 @@ public class TaskResponseDTO {
     private Instant updatedAt;
 
     private Instant completedAt;
+
+    private Instant deletedAt;
+
+    private TaskPriority priority;
 }

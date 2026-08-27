@@ -1,4 +1,4 @@
-package br.com.calendar.domain;
+package br.com.calendar.log;
 
 import br.com.calendar.user.User;
 import jakarta.persistence.Column;

@@ -1,4 +1,4 @@
-package br.com.calendar.domain;
+package br.com.calendar.notification;
 
 
 public enum NotificationType {

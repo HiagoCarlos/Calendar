@@ -1,10 +1,12 @@
-package br.com.calendar.domain;
+package br.com.calendar.task;
 
 import br.com.calendar.common.BaseEntity;
 import br.com.calendar.category.Category;
 import br.com.calendar.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -66,4 +68,8 @@ public class Task extends BaseEntity {
 
     @Column(name = "completed_at")
     private Instant completedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private TaskPriority priority;
 }

@@ -44,24 +44,24 @@ class CategoryServiceTest {
         CategoryResponseDTO expected = new CategoryResponseDTO(
                 "cat_123", "Work", "3366FF", "briefcase");
 
-        when(categoryRepository.findAllByUser_Id(USER_ID)).thenReturn(List.of(category));
+        when(categoryRepository.findAllByUser_IdAndDeletedAtIsNull(USER_ID)).thenReturn(List.of(category));
         when(categoryMapper.toResponse(category)).thenReturn(expected);
 
         List<CategoryResponseDTO> response = categoryService.getCategories(USER_ID);
 
         assertEquals(List.of(expected), response);
-        verify(categoryRepository).findAllByUser_Id(USER_ID);
+        verify(categoryRepository).findAllByUser_IdAndDeletedAtIsNull(USER_ID);
         verify(categoryMapper).toResponse(category);
     }
 
     @Test
     void returnsAnEmptyListWhenTheUserHasNoCategories() {
-        when(categoryRepository.findAllByUser_Id(USER_ID)).thenReturn(List.of());
+        when(categoryRepository.findAllByUser_IdAndDeletedAtIsNull(USER_ID)).thenReturn(List.of());
 
         List<CategoryResponseDTO> response = categoryService.getCategories(USER_ID);
 
         assertTrue(response.isEmpty());
-        verify(categoryRepository).findAllByUser_Id(USER_ID);
+        verify(categoryRepository).findAllByUser_IdAndDeletedAtIsNull(USER_ID);
         verifyNoInteractions(categoryMapper);
     }
 }
