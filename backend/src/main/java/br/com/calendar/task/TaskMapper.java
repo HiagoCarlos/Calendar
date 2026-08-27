@@ -1,8 +1,12 @@
 package br.com.calendar.task;
 
+import java.time.Instant;
+
 import org.springframework.stereotype.Component;
 
 import br.com.calendar.category.Category;
+import br.com.calendar.category.CategoryMapper;
+import br.com.calendar.task.dto.TaskMonthResponseDTO;
 import br.com.calendar.task.dto.TaskRequestDTO;
 import br.com.calendar.task.dto.TaskResponseDTO;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class TaskMapper {
+
+    private final CategoryMapper categoryMapper;
 
     public Task toEntity(TaskRequestDTO request, Category category) {
         Task task = new Task();
@@ -55,6 +61,38 @@ public class TaskMapper {
                 .completedAt(task.getCompletedAt())
                 .deletedAt(task.getDeletedAt())
                 .priority(task.getPriority())
+                .build();
+    }
+
+    /**
+     * Maps one occurrence of a (possibly recurring) task to a month-view
+     * response entry. occurrenceId/startsAt/endsAt describe this specific
+     * occurrence — for a non-recurring task, that's just the task's own id
+     * and dates; for a recurring one, the caller has already computed a
+     * distinct occurrence id and the occurrence's own dates.
+     */
+    public TaskMonthResponseDTO toMonthResponse(Task task, String occurrenceId, Instant occurrenceStartsAt, Instant occurrenceEndsAt) {
+        return TaskMonthResponseDTO.builder()
+                .id(occurrenceId)
+                .taskId(task.getId())
+                .title(task.getTitle())
+                .description(task.getDescription())
+                .timezone(task.getTimezone())
+                .location(task.getLocation())
+                .status(task.getStatus())
+                .startsAt(occurrenceStartsAt)
+                .endsAt(occurrenceEndsAt)
+                .repeat(task.getRepeat())
+                .repeatInterval(task.getRepeatInterval())
+                .allDay(task.getAllDay())
+                .priority(task.getPriority())
+                .category(
+                        task.getCategory() != null
+                                ? categoryMapper.toResponse(task.getCategory())
+                                : null)
+                .createdAt(task.getCreatedAt())
+                .updatedAt(task.getUpdatedAt())
+                .completedAt(task.getCompletedAt())
                 .build();
     }
 

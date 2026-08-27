@@ -21,6 +21,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,6 +33,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import br.com.calendar.category.Category;
 import br.com.calendar.category.CategoryService;
 import br.com.calendar.common.exception.ResourceNotFoundException;
+import br.com.calendar.task.dto.TaskMonthResponseDTO;
 import br.com.calendar.task.dto.TaskRequestDTO;
 import br.com.calendar.task.dto.TaskResponseDTO;
 import br.com.calendar.user.User;
@@ -553,5 +555,162 @@ class TaskServiceTest {
 
         verify(repository, never()).delete(any());
         verifyNoInteractions(userRepository);
+    }
+
+    private void stubMonthResponsePassthrough() {
+        // Real toMonthResponse is covered by TaskMapperTest; here we just need
+        // the occurrence dates/id passed in to be visible on the returned DTO.
+        when(taskMapper.toMonthResponse(any(), any(), any(), any())).thenAnswer(invocation -> {
+            String occurrenceId = invocation.getArgument(1);
+            Instant occursAt = invocation.getArgument(2);
+            Instant occursUntil = invocation.getArgument(3);
+            return TaskMonthResponseDTO.builder().id(occurrenceId).startsAt(occursAt).endsAt(occursUntil).build();
+        });
+    }
+
+    @Test
+    void getTasksForMonth_InvalidMonth_ThrowsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () -> taskService.getTasksForMonth(0, 2026));
+        assertThrows(IllegalArgumentException.class, () -> taskService.getTasksForMonth(13, 2026));
+
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void getTasksForMonth_ScopesByCurrentUserAndComputesMonthRange() {
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findActiveTasksForMonth(eq(USER_ID), any(), any())).thenReturn(List.of());
+
+        taskService.getTasksForMonth(8, 2026);
+
+        ArgumentCaptor<Instant> startCaptor = ArgumentCaptor.forClass(Instant.class);
+        ArgumentCaptor<Instant> endCaptor = ArgumentCaptor.forClass(Instant.class);
+        verify(repository).findActiveTasksForMonth(eq(USER_ID), startCaptor.capture(), endCaptor.capture());
+
+        assertEquals(Instant.parse("2026-08-01T00:00:00Z"), startCaptor.getValue());
+        assertEquals(Instant.parse("2026-08-31T23:59:59.999999999Z"), endCaptor.getValue());
+    }
+
+    @Test
+    void getTasksForMonth_NonRecurringTask_ReturnsSingleOccurrence() {
+        Task task = new Task();
+        task.setId(TASK_ID);
+        task.setUser(userWithId(USER_ID));
+        task.setStartsAt(Instant.parse("2026-08-10T10:00:00Z"));
+        task.setEndsAt(Instant.parse("2026-08-10T11:00:00Z"));
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findActiveTasksForMonth(eq(USER_ID), any(), any())).thenReturn(List.of(task));
+        stubMonthResponsePassthrough();
+
+        List<TaskMonthResponseDTO> result = taskService.getTasksForMonth(8, 2026);
+
+        assertEquals(1, result.size());
+        assertEquals(TASK_ID, result.get(0).getId());
+        assertEquals(task.getStartsAt(), result.get(0).getStartsAt());
+        verify(taskMapper).toMonthResponse(task, TASK_ID, task.getStartsAt(), task.getEndsAt());
+    }
+
+    @Test
+    void getTasksForMonth_DailyRecurrence_ExpandsOccurrencesWithinMonth() {
+        Task task = new Task();
+        task.setId(TASK_ID);
+        task.setUser(userWithId(USER_ID));
+        task.setStartsAt(Instant.parse("2026-08-29T10:00:00Z"));
+        task.setEndsAt(Instant.parse("2026-08-29T11:00:00Z"));
+        task.setRepeatInterval("daily");
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findActiveTasksForMonth(eq(USER_ID), any(), any())).thenReturn(List.of(task));
+        stubMonthResponsePassthrough();
+
+        List<TaskMonthResponseDTO> result = taskService.getTasksForMonth(8, 2026);
+
+        // Aug 29, 30, 31 fall in August; Sep 1 does not.
+        assertEquals(3, result.size());
+        assertEquals(Instant.parse("2026-08-29T10:00:00Z"), result.get(0).getStartsAt());
+        assertEquals(Instant.parse("2026-08-30T10:00:00Z"), result.get(1).getStartsAt());
+        assertEquals(Instant.parse("2026-08-31T10:00:00Z"), result.get(2).getStartsAt());
+    }
+
+    @Test
+    void getTasksForMonth_WeeklyRecurrenceWithStride_SkipsAccordingToStride() {
+        Task task = new Task();
+        task.setId(TASK_ID);
+        task.setUser(userWithId(USER_ID));
+        task.setStartsAt(Instant.parse("2026-08-01T10:00:00Z"));
+        task.setRepeatInterval("weekly");
+        task.setRepeat(2);
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findActiveTasksForMonth(eq(USER_ID), any(), any())).thenReturn(List.of(task));
+        stubMonthResponsePassthrough();
+
+        List<TaskMonthResponseDTO> result = taskService.getTasksForMonth(8, 2026);
+
+        // Every 2 weeks from Aug 1: Aug 1, Aug 15, Aug 29 fall in August.
+        assertEquals(3, result.size());
+        assertEquals(Instant.parse("2026-08-01T10:00:00Z"), result.get(0).getStartsAt());
+        assertEquals(Instant.parse("2026-08-15T10:00:00Z"), result.get(1).getStartsAt());
+        assertEquals(Instant.parse("2026-08-29T10:00:00Z"), result.get(2).getStartsAt());
+    }
+
+    @Test
+    void getTasksForMonth_MonthlyRecurrence_ReachesRequestedMonthFromThePast() {
+        Task task = new Task();
+        task.setId(TASK_ID);
+        task.setUser(userWithId(USER_ID));
+        task.setStartsAt(Instant.parse("2026-01-15T10:00:00Z"));
+        task.setRepeatInterval("monthly");
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findActiveTasksForMonth(eq(USER_ID), any(), any())).thenReturn(List.of(task));
+        stubMonthResponsePassthrough();
+
+        List<TaskMonthResponseDTO> result = taskService.getTasksForMonth(8, 2026);
+
+        assertEquals(1, result.size());
+        assertEquals(Instant.parse("2026-08-15T10:00:00Z"), result.get(0).getStartsAt());
+    }
+
+    @Test
+    void getTasksForMonth_UnrecognizedRepeatInterval_OnlyIncludesBaseOccurrence() {
+        Task task = new Task();
+        task.setId(TASK_ID);
+        task.setUser(userWithId(USER_ID));
+        task.setStartsAt(Instant.parse("2026-08-10T10:00:00Z"));
+        task.setRepeatInterval("fortnightly"); // not a recognized value
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findActiveTasksForMonth(eq(USER_ID), any(), any())).thenReturn(List.of(task));
+        stubMonthResponsePassthrough();
+
+        List<TaskMonthResponseDTO> result = taskService.getTasksForMonth(8, 2026);
+
+        assertEquals(1, result.size());
+        assertEquals(Instant.parse("2026-08-10T10:00:00Z"), result.get(0).getStartsAt());
+    }
+
+    @Test
+    void getTasksForMonth_SortsOccurrencesByStartsAt() {
+        Task earlyTask = new Task();
+        earlyTask.setId("early");
+        earlyTask.setUser(userWithId(USER_ID));
+        earlyTask.setStartsAt(Instant.parse("2026-08-20T10:00:00Z"));
+
+        Task lateTask = new Task();
+        lateTask.setId("late");
+        lateTask.setUser(userWithId(USER_ID));
+        lateTask.setStartsAt(Instant.parse("2026-08-05T10:00:00Z"));
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findActiveTasksForMonth(eq(USER_ID), any(), any())).thenReturn(List.of(earlyTask, lateTask));
+        stubMonthResponsePassthrough();
+
+        List<TaskMonthResponseDTO> result = taskService.getTasksForMonth(8, 2026);
+
+        assertEquals(2, result.size());
+        assertEquals("late", result.get(0).getId());
+        assertEquals("early", result.get(1).getId());
     }
 }

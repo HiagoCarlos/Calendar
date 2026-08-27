@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.calendar.task.dto.TaskMonthResponseDTO;
 import br.com.calendar.task.dto.TaskRequestDTO;
 import br.com.calendar.task.dto.TaskResponseDTO;
 import lombok.AllArgsConstructor;
@@ -48,6 +49,12 @@ public class TaskController {
     @GetMapping("/history")
     public ResponseEntity<List<TaskResponseDTO>> getTaskHistory() {
         return ResponseEntity.ok(service.getTaskHistory());
+    }
+
+    @GetMapping("/month")
+    public ResponseEntity<List<TaskMonthResponseDTO>> getTasksByMonth(
+            @RequestParam("month") int month, @RequestParam("year") int year) {
+        return ResponseEntity.ok(service.getTasksForMonth(month, year));
     }
 
     @PutMapping("/{id}")

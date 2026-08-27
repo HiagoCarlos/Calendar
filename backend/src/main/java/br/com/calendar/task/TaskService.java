@@ -1,8 +1,13 @@
 package br.com.calendar.task;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -13,6 +18,7 @@ import org.springframework.stereotype.Service;
 import br.com.calendar.category.Category;
 import br.com.calendar.category.CategoryService;
 import br.com.calendar.common.exception.ResourceNotFoundException;
+import br.com.calendar.task.dto.TaskMonthResponseDTO;
 import br.com.calendar.task.dto.TaskRequestDTO;
 import br.com.calendar.task.dto.TaskResponseDTO;
 import br.com.calendar.user.User;
@@ -53,6 +59,97 @@ public class TaskService {
         return repository.findActiveTasksForDay(userId, startOfDay, endOfDay).stream()
                 .map(taskMapper::toResponse)
                 .toList();
+    }
+
+    /**
+     * Tasks whose starts_at or ends_at falls within the given month, scoped
+     * to the current user, excluding soft-deleted tasks — recurring tasks
+     * (repeatInterval set) are expanded into their occurrences within the
+     * month rather than returned as a single row.
+     *
+     * Recurrence model (RFC 5545-style, the same one Google
+     * Calendar/Outlook/etc. use, simplified to the two columns this table
+     * has): repeatInterval is the cadence unit (daily/weekly/monthly/yearly),
+     * repeat is the stride ("every N <repeatInterval>s", defaulting to 1).
+     * There's no stored end condition, so a recurring task repeats
+     * indefinitely.
+     */
+    public List<TaskMonthResponseDTO> getTasksForMonth(int month, int year) {
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("Month must be between 1 and 12.");
+        }
+
+        String userId = currentUser().getId();
+        YearMonth yearMonth = YearMonth.of(year, month);
+        Instant monthStart = yearMonth.atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant monthEnd = yearMonth.atEndOfMonth().atTime(LocalTime.MAX).toInstant(ZoneOffset.UTC);
+
+        List<TaskMonthResponseDTO> result = new ArrayList<>();
+        for (Task task : repository.findActiveTasksForMonth(userId, monthStart, monthEnd)) {
+            if (task.getRepeatInterval() == null) {
+                result.add(taskMapper.toMonthResponse(task, task.getId(), task.getStartsAt(), task.getEndsAt()));
+                continue;
+            }
+
+            for (Occurrence occurrence : expandOccurrences(task, monthStart, monthEnd)) {
+                result.add(taskMapper.toMonthResponse(task, occurrence.id(), occurrence.startsAt(), occurrence.endsAt()));
+            }
+        }
+
+        return result.stream()
+                .sorted((a, b) -> a.getStartsAt().compareTo(b.getStartsAt()))
+                .toList();
+    }
+
+    private record Occurrence(String id, Instant startsAt, Instant endsAt) {
+    }
+
+    private static final int MAX_OCCURRENCES_PER_TASK = 1000;
+
+    private List<Occurrence> expandOccurrences(Task task, Instant monthStart, Instant monthEnd) {
+        Duration eventDuration = task.getEndsAt() != null
+                ? Duration.between(task.getStartsAt(), task.getEndsAt())
+                : null;
+        int stride = task.getRepeat() != null && task.getRepeat() > 0 ? task.getRepeat() : 1;
+
+        List<Occurrence> occurrences = new ArrayList<>();
+        Instant cursor = task.getStartsAt();
+
+        for (int i = 0; i < MAX_OCCURRENCES_PER_TASK && !cursor.isAfter(monthEnd); i++) {
+            Instant occursAt = cursor;
+            Instant occursUntil = eventDuration != null ? occursAt.plus(eventDuration) : null;
+
+            boolean withinMonth = isWithin(occursAt, monthStart, monthEnd)
+                    || (occursUntil != null && isWithin(occursUntil, monthStart, monthEnd));
+            if (withinMonth) {
+                occurrences.add(new Occurrence(task.getId() + "_" + occursAt, occursAt, occursUntil));
+            }
+
+            Instant next = step(cursor, task.getRepeatInterval(), stride);
+            if (next == null || !next.isAfter(cursor)) {
+                // Unrecognized repeatInterval, or stepping didn't advance
+                // (would loop forever) — stop instead of expanding further.
+                break;
+            }
+            cursor = next;
+        }
+
+        return occurrences;
+    }
+
+    private static boolean isWithin(Instant instant, Instant start, Instant end) {
+        return !instant.isBefore(start) && !instant.isAfter(end);
+    }
+
+    private static Instant step(Instant from, String repeatInterval, int stride) {
+        ZonedDateTime zoned = from.atZone(ZoneOffset.UTC);
+        return switch (repeatInterval.toLowerCase()) {
+            case "daily" -> zoned.plusDays(stride).toInstant();
+            case "weekly" -> zoned.plusWeeks(stride).toInstant();
+            case "monthly" -> zoned.plusMonths(stride).toInstant();
+            case "yearly" -> zoned.plusYears(stride).toInstant();
+            default -> null;
+        };
     }
 
     public void deleteTask(String id) {
