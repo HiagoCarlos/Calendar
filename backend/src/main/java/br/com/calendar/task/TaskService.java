@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -104,50 +104,84 @@ public class TaskService {
     private record Occurrence(String id, Instant startsAt, Instant endsAt) {
     }
 
+    // Safety net for how many occurrences a single month can legitimately
+    // contain (daily with stride 1 tops out at 31) — not a substitute for
+    // correctly locating where iteration should start, which
+    // fastForwardOnOrBefore handles regardless of how old the task is.
     private static final int MAX_OCCURRENCES_PER_TASK = 1000;
 
     private List<Occurrence> expandOccurrences(Task task, Instant monthStart, Instant monthEnd) {
+        ChronoUnit unit = chronoUnit(task.getRepeatInterval());
+        if (unit == null) {
+            // Unrecognized repeatInterval: treat as a single, non-repeating
+            // occurrence rather than guessing a cadence.
+            return overlapsMonth(task.getStartsAt(), task.getEndsAt(), monthStart, monthEnd)
+                    ? List.of(new Occurrence(task.getId() + "_" + task.getStartsAt(), task.getStartsAt(), task.getEndsAt()))
+                    : List.of();
+        }
+
         Duration eventDuration = task.getEndsAt() != null
                 ? Duration.between(task.getStartsAt(), task.getEndsAt())
                 : null;
         int stride = task.getRepeat() != null && task.getRepeat() > 0 ? task.getRepeat() : 1;
 
         List<Occurrence> occurrences = new ArrayList<>();
-        Instant cursor = task.getStartsAt();
+        // Jump straight to the last occurrence at/before the start of the
+        // month instead of walking one stride at a time from the task's
+        // original startsAt — otherwise a long-lived daily/weekly task hits
+        // MAX_OCCURRENCES_PER_TASK before ever reaching a month that's years
+        // out, and silently disappears from it.
+        Instant cursor = fastForwardOnOrBefore(task.getStartsAt(), unit, stride, monthStart);
 
         for (int i = 0; i < MAX_OCCURRENCES_PER_TASK && !cursor.isAfter(monthEnd); i++) {
             Instant occursAt = cursor;
             Instant occursUntil = eventDuration != null ? occursAt.plus(eventDuration) : null;
 
-            boolean withinMonth = isWithin(occursAt, monthStart, monthEnd)
-                    || (occursUntil != null && isWithin(occursUntil, monthStart, monthEnd));
-            if (withinMonth) {
+            if (overlapsMonth(occursAt, occursUntil, monthStart, monthEnd)) {
                 occurrences.add(new Occurrence(task.getId() + "_" + occursAt, occursAt, occursUntil));
             }
 
-            Instant next = step(cursor, task.getRepeatInterval(), stride);
-            if (next == null || !next.isAfter(cursor)) {
-                // Unrecognized repeatInterval, or stepping didn't advance
-                // (would loop forever) — stop instead of expanding further.
-                break;
-            }
-            cursor = next;
+            cursor = cursor.atZone(ZoneOffset.UTC).plus(stride, unit).toInstant();
         }
 
         return occurrences;
     }
 
-    private static boolean isWithin(Instant instant, Instant start, Instant end) {
-        return !instant.isBefore(start) && !instant.isAfter(end);
+    /**
+     * Does an event running from `start` (to `end`, or a single instant if
+     * `end` is null) overlap the [monthStart, monthEnd] range at all? Covers
+     * starting in the month, ending in the month, and fully spanning it.
+     */
+    private static boolean overlapsMonth(Instant start, Instant end, Instant monthStart, Instant monthEnd) {
+        if (start.isAfter(monthEnd)) {
+            return false;
+        }
+        Instant effectiveEnd = end != null ? end : start;
+        return !effectiveEnd.isBefore(monthStart);
     }
 
-    private static Instant step(Instant from, String repeatInterval, int stride) {
-        ZonedDateTime zoned = from.atZone(ZoneOffset.UTC);
+    /**
+     * The largest value of the form `start + k*stride*unit` (k >= 0) that is
+     * <= target, computed directly instead of by iterating — `unit.between`
+     * gives the exact number of whole units between two instants, so this is
+     * O(1) regardless of how far apart `start` and `target` are.
+     */
+    private static Instant fastForwardOnOrBefore(Instant start, ChronoUnit unit, int stride, Instant target) {
+        if (!start.isBefore(target)) {
+            return start;
+        }
+
+        long unitsBetween = unit.between(start.atZone(ZoneOffset.UTC), target.atZone(ZoneOffset.UTC));
+        long strides = unitsBetween / stride;
+        return start.atZone(ZoneOffset.UTC).plus(strides * stride, unit).toInstant();
+    }
+
+    private static ChronoUnit chronoUnit(String repeatInterval) {
         return switch (repeatInterval.toLowerCase()) {
-            case "daily" -> zoned.plusDays(stride).toInstant();
-            case "weekly" -> zoned.plusWeeks(stride).toInstant();
-            case "monthly" -> zoned.plusMonths(stride).toInstant();
-            case "yearly" -> zoned.plusYears(stride).toInstant();
+            case "daily" -> ChronoUnit.DAYS;
+            case "weekly" -> ChronoUnit.WEEKS;
+            case "monthly" -> ChronoUnit.MONTHS;
+            case "yearly" -> ChronoUnit.YEARS;
             default -> null;
         };
     }

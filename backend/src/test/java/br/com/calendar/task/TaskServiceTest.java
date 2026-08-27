@@ -692,6 +692,51 @@ class TaskServiceTest {
     }
 
     @Test
+    void getTasksForMonth_OldDailyRecurrence_StillReachesRequestedMonth() {
+        // Created ~11 years before the requested month: walking one day at a
+        // time from startsAt would hit MAX_OCCURRENCES_PER_TASK (1000) long
+        // before reaching August 2026, and silently return nothing.
+        Task task = new Task();
+        task.setId(TASK_ID);
+        task.setUser(userWithId(USER_ID));
+        task.setStartsAt(Instant.parse("2015-01-01T10:00:00Z"));
+        task.setRepeatInterval("daily");
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findActiveTasksForMonth(eq(USER_ID), any(), any())).thenReturn(List.of(task));
+        stubMonthResponsePassthrough();
+
+        List<TaskMonthResponseDTO> result = taskService.getTasksForMonth(8, 2026);
+
+        assertEquals(31, result.size());
+        assertEquals(Instant.parse("2026-08-01T10:00:00Z"), result.get(0).getStartsAt());
+        assertEquals(Instant.parse("2026-08-31T10:00:00Z"), result.get(30).getStartsAt());
+    }
+
+    @Test
+    void getTasksForMonth_RecurringOccurrenceFullySpanningMonth_IsIncluded() {
+        // First occurrence starts before the requested month and ends after
+        // it — neither its start nor its end falls inside the month, but it
+        // still spans (and should cover) the whole thing.
+        Task task = new Task();
+        task.setId(TASK_ID);
+        task.setUser(userWithId(USER_ID));
+        task.setStartsAt(Instant.parse("2026-07-25T10:00:00Z"));
+        task.setEndsAt(Instant.parse("2026-09-05T10:00:00Z"));
+        task.setRepeatInterval("yearly");
+
+        mockAuthenticatedUser(userWithId(USER_ID));
+        when(repository.findActiveTasksForMonth(eq(USER_ID), any(), any())).thenReturn(List.of(task));
+        stubMonthResponsePassthrough();
+
+        List<TaskMonthResponseDTO> result = taskService.getTasksForMonth(8, 2026);
+
+        assertEquals(1, result.size());
+        assertEquals(Instant.parse("2026-07-25T10:00:00Z"), result.get(0).getStartsAt());
+        assertEquals(Instant.parse("2026-09-05T10:00:00Z"), result.get(0).getEndsAt());
+    }
+
+    @Test
     void getTasksForMonth_SortsOccurrencesByStartsAt() {
         Task earlyTask = new Task();
         earlyTask.setId("early");
