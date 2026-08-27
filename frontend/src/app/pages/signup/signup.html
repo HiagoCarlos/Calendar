@@ -90,6 +90,43 @@
         </p>
       </header>
 
+      @if (apiError()) {
+        <div
+          class="mb-4 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-start gap-2.5 animate-error shadow-2xs"
+        >
+          <svg
+            class="w-4 h-4 text-red-500 shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span class="font-medium leading-relaxed">{{ apiError() }}</span>
+        </div>
+      }
+
+      @if (successMessage()) {
+        <div
+          class="mb-4 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-start gap-2.5 animate-fade-in-down shadow-2xs"
+        >
+          <svg
+            class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          <span class="font-medium leading-relaxed">{{ successMessage() }}</span>
+        </div>
+      }
+
       <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate class="space-y-3.5 sm:space-y-4">
         <div class="animate-fade-in-up delay-1">
           <label
@@ -100,16 +137,26 @@
           </label>
           <div
             class="relative flex items-center border rounded-lg px-3.5 py-2.5 bg-white transition-all duration-200 shadow-xs hover:border-gray-300"
-            [class.border-red-400]="showError('name', 'required') || showError('name', 'minlength')"
+            [class.border-red-400]="
+              showError('name', 'required') ||
+              showError('name', 'minlength') ||
+              showError('name', 'pattern')
+            "
             [class.border-gray-200]="
-              !showError('name', 'required') && !showError('name', 'minlength')
+              !showError('name', 'required') &&
+              !showError('name', 'minlength') &&
+              !showError('name', 'pattern')
             "
             [class.focus-within:ring-4]="true"
             [class.focus-within:ring-blue-500/10]="
-              !showError('name', 'required') && !showError('name', 'minlength')
+              !showError('name', 'required') &&
+              !showError('name', 'minlength') &&
+              !showError('name', 'pattern')
             "
             [class.focus-within:border-[#0055b8]]="
-              !showError('name', 'required') && !showError('name', 'minlength')
+              !showError('name', 'required') &&
+              !showError('name', 'minlength') &&
+              !showError('name', 'pattern')
             "
           >
             <svg
@@ -129,7 +176,11 @@
               autocomplete="name"
               placeholder="Estef&acirc;nio"
               class="w-full text-sm text-gray-900 outline-none bg-transparent placeholder:text-gray-400"
-              [attr.aria-invalid]="showError('name', 'required') || showError('name', 'minlength')"
+              [attr.aria-invalid]="
+                showError('name', 'required') ||
+                showError('name', 'minlength') ||
+                showError('name', 'pattern')
+              "
               aria-describedby="name-error"
             />
           </div>
@@ -140,6 +191,10 @@
           } @else if (showError('name', 'minlength')) {
             <p id="name-min-error" class="text-xs text-red-500 mt-1 font-medium animate-error">
               O nome deve ter pelo menos 2 caracteres.
+            </p>
+          } @else if (showError('name', 'pattern')) {
+            <p id="name-pattern-error" class="text-xs text-red-500 mt-1 font-medium animate-error">
+              O nome deve conter apenas letras e espa&ccedil;os (sem emojis ou n&uacute;meros).
             </p>
           }
         </div>
@@ -153,16 +208,26 @@
           </label>
           <div
             class="relative flex items-center border rounded-lg px-3.5 py-2.5 bg-white transition-all duration-200 shadow-xs hover:border-gray-300"
-            [class.border-red-400]="showError('email', 'required') || showError('email', 'email')"
+            [class.border-red-400]="
+              showError('email', 'required') ||
+              showError('email', 'email') ||
+              showError('email', 'pattern')
+            "
             [class.border-gray-200]="
-              !showError('email', 'required') && !showError('email', 'email')
+              !showError('email', 'required') &&
+              !showError('email', 'email') &&
+              !showError('email', 'pattern')
             "
             [class.focus-within:ring-4]="true"
             [class.focus-within:ring-blue-500/10]="
-              !showError('email', 'required') && !showError('email', 'email')
+              !showError('email', 'required') &&
+              !showError('email', 'email') &&
+              !showError('email', 'pattern')
             "
             [class.focus-within:border-[#0055b8]]="
-              !showError('email', 'required') && !showError('email', 'email')
+              !showError('email', 'required') &&
+              !showError('email', 'email') &&
+              !showError('email', 'pattern')
             "
           >
             <svg
@@ -182,7 +247,11 @@
               autocomplete="email"
               placeholder="exemplo@projeto-a.com"
               class="w-full text-sm text-gray-900 outline-none bg-transparent placeholder:text-gray-400"
-              [attr.aria-invalid]="showError('email', 'required') || showError('email', 'email')"
+              [attr.aria-invalid]="
+                showError('email', 'required') ||
+                showError('email', 'email') ||
+                showError('email', 'pattern')
+              "
               aria-describedby="email-error"
             />
           </div>
@@ -190,7 +259,7 @@
             <p id="email-error" class="text-xs text-red-500 mt-1 font-medium animate-error">
               Informe seu e-mail.
             </p>
-          } @else if (showError('email', 'email')) {
+          } @else if (showError('email', 'email') || showError('email', 'pattern')) {
             <p id="email-format-error" class="text-xs text-red-500 mt-1 font-medium animate-error">
               Informe um e-mail v&aacute;lido.
             </p>
@@ -208,17 +277,25 @@
             <div
               class="relative flex items-center border rounded-lg px-3.5 py-2.5 bg-white transition-all duration-200 shadow-xs hover:border-gray-300"
               [class.border-red-400]="
-                showError('password', 'required') || showError('password', 'minlength')
+                showError('password', 'required') ||
+                showError('password', 'minlength') ||
+                showError('password', 'pattern')
               "
               [class.border-gray-200]="
-                !showError('password', 'required') && !showError('password', 'minlength')
+                !showError('password', 'required') &&
+                !showError('password', 'minlength') &&
+                !showError('password', 'pattern')
               "
               [class.focus-within:ring-4]="true"
               [class.focus-within:ring-blue-500/10]="
-                !showError('password', 'required') && !showError('password', 'minlength')
+                !showError('password', 'required') &&
+                !showError('password', 'minlength') &&
+                !showError('password', 'pattern')
               "
               [class.focus-within:border-[#0055b8]]="
-                !showError('password', 'required') && !showError('password', 'minlength')
+                !showError('password', 'required') &&
+                !showError('password', 'minlength') &&
+                !showError('password', 'pattern')
               "
             >
               <svg
@@ -233,13 +310,15 @@
               </svg>
               <input
                 id="password"
-                type="password"
+                [type]="showPassword() ? 'text' : 'password'"
                 formControlName="password"
                 autocomplete="new-password"
                 placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
                 class="w-full text-sm text-gray-900 outline-none bg-transparent placeholder:text-gray-400 tracking-wider"
                 [attr.aria-invalid]="
-                  showError('password', 'required') || showError('password', 'minlength')
+                  showError('password', 'required') ||
+                  showError('password', 'minlength') ||
+                  showError('password', 'pattern')
                 "
                 aria-describedby="password-error"
               />
@@ -254,6 +333,13 @@
                 class="text-xs text-red-500 mt-1 font-medium animate-error"
               >
                 M&iacute;nimo 8 caracteres.
+              </p>
+            } @else if (showError('password', 'pattern')) {
+              <p
+                id="password-pattern-error"
+                class="text-xs text-red-500 mt-1 font-medium animate-error"
+              >
+                A senha n&atilde;o pode conter emojis.
               </p>
             }
           </div>
@@ -297,7 +383,7 @@
               </svg>
               <input
                 id="password_confirmation"
-                type="password"
+                [type]="showPassword() ? 'text' : 'password'"
                 formControlName="password_confirmation"
                 autocomplete="new-password"
                 placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
@@ -325,6 +411,24 @@
               </p>
             }
           </div>
+        </div>
+
+        <div
+          class="flex items-center gap-2 select-none animate-fade-in-up delay-3 -mt-1 sm:-mt-1.5"
+        >
+          <input
+            id="show-password-toggle"
+            type="checkbox"
+            [checked]="showPassword()"
+            (change)="toggleShowPassword()"
+            class="h-3.5 w-3.5 rounded border-gray-300 text-[#0055b8] focus:ring-[#0055b8] accent-[#0055b8] cursor-pointer transition-colors"
+          />
+          <label
+            for="show-password-toggle"
+            class="text-xs text-gray-600 font-medium cursor-pointer"
+          >
+            Mostrar senha
+          </label>
         </div>
 
         <div class="pt-1 animate-fade-in-up delay-4">
@@ -357,9 +461,29 @@
         <div class="animate-fade-in-up delay-5 pt-1">
           <button
             type="submit"
-            class="w-full py-3 px-4 bg-[#0055b8] hover:bg-[#00479e] active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-md text-white text-sm font-semibold rounded-lg shadow-sm transition-all duration-200 cursor-pointer"
+            [disabled]="isLoading()"
+            class="w-full py-3 px-4 bg-[#0055b8] hover:bg-[#00479e] active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-md text-white text-sm font-semibold rounded-lg shadow-sm transition-all duration-200 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Criar Conta
+            @if (isLoading()) {
+              <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              <span>Cadastrando...</span>
+            } @else {
+              <span>Criar Conta</span>
+            }
           </button>
         </div>
       </form>
