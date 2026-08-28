@@ -1,0 +1,23 @@
+name: Auto Assign Issue
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  assign:
+    # Só roda se o comentário for exatamente "/assign" (ignorando maiúsculas/minúsculas e espaços)
+    if: github.event.issue.pull_request == null && contains(github.event.comment.body, '/assign')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Assign issue to commenter
+        uses: pozil/auto-assign-issue@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          assignees: ${{ github.event.comment.user.login }}
+          # Limita quantas issues em aberto a mesma pessoa pode ter atribuídas ao mesmo tempo
+          maxAssignees: 1
+          # Impede que a pessoa pegue uma issue que já tem alguém atribuído
+          allowSelfAssign: true
