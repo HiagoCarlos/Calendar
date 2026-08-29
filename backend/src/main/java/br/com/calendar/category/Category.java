@@ -1,5 +1,9 @@
 package br.com.calendar.category;
 
+import java.time.Instant;
+
+import org.hibernate.annotations.SQLDelete;
+
 import br.com.calendar.common.BaseEntity;
 import br.com.calendar.user.User;
 import jakarta.persistence.Column;
@@ -9,12 +13,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.hibernate.annotations.SQLDelete;
-
-import java.time.Instant;
 
 @Getter
 @Setter
