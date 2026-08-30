@@ -17,6 +17,12 @@ export const routes: Routes = [
     title: 'Entrar',
   },
   {
+    path: 'resetar-senha',
+    loadComponent: () =>
+      import('./pages/reset-password/reset-password').then((m) => m.ResetPassword),
+    title: 'Resetar senha',
+  },
+  {
     path: '',
     pathMatch: 'full',
     redirectTo: 'signup',
