@@ -3,6 +3,7 @@ package br.com.calendar.category;
 import br.com.calendar.category.dto.CategoryRequestDTO;
 import br.com.calendar.category.dto.CategoryResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -28,7 +29,7 @@ public class CategoryController {
     @Operation(summary = "Create a category for the authenticated user")
     @PostMapping
     public ResponseEntity<CategoryResponseDTO> createCategory(
-            @RequestBody CategoryRequestDTO request, Authentication authentication) {
+            @Valid @RequestBody CategoryRequestDTO request, Authentication authentication) {
         String userId = authenticatedUserId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(categoryService.createCategory(request, userId));
