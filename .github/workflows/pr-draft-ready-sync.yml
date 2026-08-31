@@ -1,0 +1,66 @@
+name: PR draft/ready sync
+
+on:
+  # pull_request_target (not pull_request) is required so this works on PRs
+  # opened from forks — GitHub forces GITHUB_TOKEN to read-only for the
+  # plain pull_request event when the PR comes from a fork, ignoring the
+  # `permissions:` block below entirely. This is safe here specifically
+  # because the workflow never checks out or executes the fork's code —
+  # it only reads PR metadata (body, draft status) and calls API mutations.
+  pull_request_target:
+    types: [opened, edited]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  sync-draft-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Draft or ready-for-review based on current PR state
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const number = context.payload.pull_request.number;
+
+            // Always re-fetch the PR instead of trusting the event payload,
+            // since a parallel run of this same workflow (e.g. from another
+            // event) could have changed its draft status a moment ago.
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: number,
+            });
+
+            const body = pr.body || '';
+            const closesPattern = /\b(close|closes|closed|fix|fixes|fixed|resolved)\s+#\d+/i;
+            const hasClosingKeyword = closesPattern.test(body);
+
+            if (hasClosingKeyword && pr.draft) {
+              await github.graphql(
+                `mutation($id: ID!) {
+                  markPullRequestReadyForReview(input: { pullRequestId: $id }) {
+                    pullRequest { id isDraft }
+                  }
+                }`,
+                { id: pr.node_id }
+              );
+              core.info(`PR #${number} marked ready for review.`);
+              return;
+            }
+
+            if (!hasClosingKeyword && !pr.draft) {
+              await github.graphql(
+                `mutation($id: ID!) {
+                  convertPullRequestToDraft(input: { pullRequestId: $id }) {
+                    pullRequest { id isDraft }
+                  }
+                }`,
+                { id: pr.node_id }
+              );
+              core.info(`PR #${number} converted to draft.`);
+              return;
+            }
+
+            core.info(`PR #${number} already in the correct state (draft=${pr.draft}, hasClosingKeyword=${hasClosingKeyword}), nothing to do.`);
