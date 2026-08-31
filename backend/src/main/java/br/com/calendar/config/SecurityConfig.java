@@ -37,7 +37,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/signup",
                                 "/auth/forgot-password", "/auth/verify-otp", "/auth/reset-password",
                                 "/auth/confirm-email").permitAll()
-                        .requestMatchers("/health").permitAll()
+                        .requestMatchers("/health", "/actuator/**").permitAll()
                         .requestMatchers(swaggerPaths).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
