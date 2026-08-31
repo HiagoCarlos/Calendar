@@ -34,7 +34,7 @@ public class TaskController {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.createTask(task));
     }
 
-    @GetMapping
+    @GetMapping(params = "date")
     public ResponseEntity<List<TaskResponseDTO>> getTasksByDay(
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(service.getTasksForDay(date));
@@ -51,7 +51,7 @@ public class TaskController {
         return ResponseEntity.ok(service.getTaskHistory());
     }
 
-    @GetMapping("/month")
+    @GetMapping(params = {"month", "year"})
     public ResponseEntity<List<TaskMonthResponseDTO>> getTasksByMonth(
             @RequestParam("month") int month, @RequestParam("year") int year) {
         return ResponseEntity.ok(service.getTasksForMonth(month, year));
