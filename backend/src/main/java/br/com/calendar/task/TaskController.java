@@ -3,6 +3,9 @@ package br.com.calendar.task;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,11 +49,6 @@ public class TaskController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/history")
-    public ResponseEntity<List<TaskResponseDTO>> getTaskHistory() {
-        return ResponseEntity.ok(service.getTaskHistory());
-    }
-
     @GetMapping("/month")
     public ResponseEntity<List<TaskMonthResponseDTO>> getTasksByMonth(
             @RequestParam("month") int month, @RequestParam("year") int year) {
@@ -66,4 +64,11 @@ public class TaskController {
     public ResponseEntity<TaskResponseDTO> patchTask(@PathVariable String id, @RequestBody TaskRequestDTO task) {
         return ResponseEntity.ok(service.updateTask(task, id));
     }
+
+    @GetMapping("/tasks/history")
+    public Page<TaskResponseDTO> getTaskHistory(
+        @PageableDefault(size = 20) Pageable pageable) {
+        return service.getTaskHistory(pageable); 
+        
+}
 }

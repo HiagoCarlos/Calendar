@@ -44,13 +44,16 @@ public interface TaskRepository extends JpaRepository<Task, String> {
             " ORDER BY t.startsAt")
     List<Task> findActiveTasksForMonth(@Param("userId") String userId, @Param("monthStart") Instant monthStart, @Param("monthEnd") Instant monthEnd);
 
-    @Query("SELECT t FROM Task t " +
-        "WHERE t.user.id = :userId " +
-        "AND t.deletedAt IS NULL " +
-        "AND ( " +
-        "   (t.repeat = false AND t.startsAt < :end AND (t.endsAt IS NULL OR t.endsAt > :start)) " +
-        "   OR " +
-        "   (t.repeat = true AND t.startsAt < :end) " +
-        ")")
-    Page<Task> findTasksOverlappingDay(@Param("userId") String userId, @Param("start") Instant start, @Param("end") Instant end, Pageable pageable);
+    @Query(
+    value = "SELECT t FROM Task t " +
+            "WHERE t.user.id = :userId " +
+            "AND (t.startsAt < :now OR t.completedAt IS NOT NULL) " +
+            "ORDER BY COALESCE(t.completedAt, t.startsAt) DESC",
+    countQuery = "SELECT COUNT(t) FROM Task t " +
+            "WHERE t.user.id = :userId " +
+            "AND (t.startsAt < :now OR t.completedAt IS NOT NULL)"
+)
+Page<Task> findTaskHistory(@Param("userId") String userId, @Param("now") Instant now, Pageable pageable);
+
+   
 }
