@@ -10,9 +10,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.access.AccessDeniedException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
+import tools.jackson.databind.ser.std.StdSerializer;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
@@ -22,7 +33,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 class TaskControllerTest {
@@ -32,11 +44,25 @@ class TaskControllerTest {
 
     private MockMvc mockMvc;
 
+
     @BeforeEach
     void setUp() {
+        JsonMapper mapper = JsonMapper.builder()
+                .addModule(new SimpleModule().addSerializer(Page.class, new StdSerializer<>(Page.class) {
+                    @Override
+                    public void serialize(Page value, JsonGenerator gen, SerializationContext ctxt) {
+                        gen.writeStartObject();
+                        ctxt.defaultSerializeProperty("content", value.getContent(), gen);
+                        gen.writeEndObject();
+                    }
+                }))
+                .build();
+
         mockMvc = MockMvcBuilders
                 .standaloneSetup(new TaskController(taskService))
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setMessageConverters(new JacksonJsonHttpMessageConverter(mapper))
                 .build();
     }
 
@@ -127,15 +153,17 @@ class TaskControllerTest {
     }
 
     @Test
-    void getTaskHistory_Returns200_WithList() throws Exception {
+    void getTaskHistory_Returns200_WithPage() throws Exception {
         TaskResponseDTO response = TaskResponseDTO.builder().id("task1").title("My Task").build();
-        when(taskService.getTaskHistory()).thenReturn(List.of(response));
+        when(taskService.getTaskHistory(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(response)));
 
         mockMvc.perform(get("/tasks/history"))
+                .andDo(MockMvcResultHandlers.print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("task1"));
+                .andExpect(jsonPath("$.content[0].id").value("task1"));
 
-        verify(taskService).getTaskHistory();
+        verify(taskService).getTaskHistory(any(Pageable.class));
     }
 
     @Test
