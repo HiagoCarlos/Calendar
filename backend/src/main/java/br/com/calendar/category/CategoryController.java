@@ -2,7 +2,6 @@ package br.com.calendar.category;
 
 import br.com.calendar.category.dto.CategoryRequestDTO;
 import br.com.calendar.category.dto.CategoryResponseDTO;
-import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +25,6 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
-    @Operation(summary = "Create a category for the authenticated user")
     @PostMapping
     public ResponseEntity<CategoryResponseDTO> createCategory(
             @Valid @RequestBody CategoryRequestDTO request, Authentication authentication) {
@@ -35,7 +33,6 @@ public class CategoryController {
                 .body(categoryService.createCategory(request, userId));
     }
 
-    @Operation(summary = "Get the authenticated user's categories")
     @GetMapping
     public ResponseEntity<List<CategoryResponseDTO>> getCategories(Authentication authentication) {
         return ResponseEntity.ok(categoryService.getCategories(authenticatedUserId(authentication)));
