@@ -34,9 +34,6 @@ public class UserService {
     }
 
     public UserResponseDTO createUser(CreateUserDTO dto) {
-        if (userRepository.findByEmail(dto.email()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to complete registration");
-        }
 
         User user = userMapper.toEntity(dto);
         user.setEmailConfirmed(false);
