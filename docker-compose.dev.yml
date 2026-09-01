@@ -15,9 +15,9 @@ services:
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-calendar}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-calendar}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-change_this_password}
-      SECRET_PASSWORD_PEPPER: ${SECRET_PASSWORD_PEPPER:-PcIXOFGPbyKWxGdzaX8cZ0HNV5kg41SHyxyoRMdDEbONsK+W7oMlZe4jJ0O7NM3g}
-      JWT_SECRET: ${JWT_SECRET:-TY9RWeC5jbE0uf+hpSolBCamm3WWag4aJH+sKPIm532Nm2YDWbdJEezISyjjNA5o}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-calendar}
+      SECRET_PASSWORD_PEPPER: ${SECRET_PASSWORD_PEPPER:-dev-only-pepper-change-in-production}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-in-production-0123456789abcdef}
       # Without real Gmail credentials, this is the only way to see a
       # confirmation link / reset code locally.
       LOGGING_LEVEL_BR_COM_CALENDAR_EMAIL: DEBUG
