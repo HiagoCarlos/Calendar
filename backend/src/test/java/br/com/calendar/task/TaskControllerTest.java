@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 
 import br.com.calendar.common.exception.GlobalExceptionHandler;
 import br.com.calendar.task.dto.TaskResponseDTO;
@@ -42,11 +43,12 @@ class TaskControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders
-                .standaloneSetup(new TaskController(taskService))
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
-    }
+    mockMvc = MockMvcBuilders
+            .standaloneSetup(new TaskController(taskService))
+            .setControllerAdvice(new GlobalExceptionHandler())
+            .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+            .build();
+}
 
     @Test
     void returnsThePaginatedHistoryForTheAuthenticatedUser() throws Exception {
