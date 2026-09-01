@@ -2,6 +2,7 @@ package br.com.calendar.auth;
 
 import br.com.calendar.auth.dto.AuthResponse;
 import br.com.calendar.auth.dto.ConfirmEmailRequest;
+import br.com.calendar.auth.dto.ForgotPasswordRequest;
 import br.com.calendar.auth.dto.LoginRequest;
 import br.com.calendar.auth.dto.ResetPasswordRequest;
 import br.com.calendar.auth.dto.SignupRequest;
@@ -10,7 +11,6 @@ import br.com.calendar.auth.dto.VerifyOtpResponse;
 import br.com.calendar.user.UserService;
 import br.com.calendar.user.dto.OtpResponseDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
-import br.com.calendar.user.dto.UserSummaryDTO;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -97,32 +97,7 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    @Test
-    void meWithValidTokenReturns200() throws Exception {
-        // first login to get a token
-        LoginRequest loginRequest = new LoginRequest(EMAIL, PASSWORD);
-        MvcResult result = mockMvc.perform(post("/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isOk())
-                .andReturn();
 
-        AuthResponse authResponse = objectMapper.readValue(
-                result.getResponse().getContentAsString(), AuthResponse.class);
-        String token = authResponse.accessToken();
-
-        mockMvc.perform(get("/auth/me")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", notNullValue()))
-                .andExpect(jsonPath("$.email").value(EMAIL));
-    }
-
-    @Test
-    void meWithoutTokenReturns401() throws Exception {
-        mockMvc.perform(get("/auth/me"))
-                .andExpect(status().isUnauthorized());
-    }
 
     @Test
     void logoutReturns204() throws Exception {
@@ -163,7 +138,7 @@ class AuthControllerTest {
                 .andExpect(status().isNoContent());
 
         // try to use the revoked token
-        mockMvc.perform(get("/auth/me")
+        mockMvc.perform(get("/users/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized());
     }
@@ -296,6 +271,84 @@ class AuthControllerTest {
         mockMvc.perform(post("/auth/confirm-email")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ConfirmEmailRequest(""))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void signupReturns400WhenEmailAlreadyExists() throws Exception {
+        SignupRequest request = new SignupRequest("Test User", EMAIL, PASSWORD);
+
+        mockMvc.perform(post("/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void signupReturns400WhenEmailIsInvalid() throws Exception {
+        SignupRequest request = new SignupRequest("New User", "invalid-email", PASSWORD);
+
+        mockMvc.perform(post("/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.email").exists());
+    }
+
+    @Test
+    void loginReturns401WhenEmailDoesNotExist() throws Exception {
+        LoginRequest request = new LoginRequest("nonexistent@example.com", PASSWORD);
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void forgotPasswordReturns200ForValidEmail() throws Exception {
+        ForgotPasswordRequest request = new ForgotPasswordRequest(EMAIL);
+
+        mockMvc.perform(post("/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", notNullValue()));
+    }
+
+    @Test
+    void forgotPasswordReturns200ForNonexistentEmail() throws Exception {
+        ForgotPasswordRequest request = new ForgotPasswordRequest("nonexistent@example.com");
+
+        mockMvc.perform(post("/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void verifyOtpReturns200WithValidOtp() throws Exception {
+        String email = "otp-valid-" + System.currentTimeMillis() + "@example.com";
+        authService.signup(new SignupRequest("OTP User", email, PASSWORD));
+        UserResponseDTO user = userService.getUserByEmail(email);
+        OtpResponseDTO otp = userService.generatePasswordResetOtp(user.id());
+
+        VerifyOtpRequest request = new VerifyOtpRequest(email, otp.otp());
+
+        mockMvc.perform(post("/auth/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resetToken", notNullValue()));
+    }
+
+    @Test
+    void verifyOtpReturns400WithInvalidOtp() throws Exception {
+        VerifyOtpRequest request = new VerifyOtpRequest(EMAIL, "123456");
+
+        mockMvc.perform(post("/auth/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
 

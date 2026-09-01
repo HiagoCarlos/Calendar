@@ -16,7 +16,6 @@ import br.com.calendar.user.UserService;
 import br.com.calendar.user.dto.CreateUserDTO;
 import br.com.calendar.user.dto.OtpResponseDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
-import br.com.calendar.user.dto.UserSummaryDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -273,21 +272,7 @@ class AuthServiceTest {
         return user;
     }
 
-    @Test
-    void meReturnsUserData() {
-        User user = new User();
-        user.setId(USER_ID);
-        user.setName("Danillo");
-        user.setEmail("test@example.com");
 
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-
-        UserSummaryDTO response = authService.me(USER_ID);
-
-        assertEquals(USER_ID, response.id());
-        assertEquals("Danillo", response.name());
-        assertEquals("test@example.com", response.email());
-    }
 
     @Test
     void logoutRevokesToken() {
