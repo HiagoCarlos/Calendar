@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -191,15 +193,21 @@ public class TaskService {
             checkOwnership(task);
             repository.delete(task);
         });
-    }
-
-    public List<TaskResponseDTO> getTaskHistory() {
+    }  
+    /**
+    * Returns the task history for the currently authenticated user,
+    * mapped to TaskResponseDTO. Delegates the actual filtering/ordering
+    * logic to the repository query (findTaskHistory).
+    */
+    public Page<TaskResponseDTO> getTaskHistory(Pageable pageable) {
         String userId = currentUser().getId();
-        return repository.findAllByUser_Id(userId).stream()
-                .map(taskMapper::toResponse)
-                .toList();
-    }
-
+         // "now" is computed here instead of using the database's
+        // CURRENT_TIMESTAMP so the reference instant is explicit and
+        // testable (can be swapped for a fixed Clock later if needed).
+        Instant now = Instant.now();
+        return repository.findTaskHistory(userId, now, pageable)
+            .map(taskMapper::toResponse);
+}
     /**
      * PATCH semantics: fields omitted from the request are left unchanged.
      */
@@ -287,4 +295,5 @@ public class TaskService {
             throw new IllegalArgumentException("Task start time must be before its end time.");
         }
     }
+
 }

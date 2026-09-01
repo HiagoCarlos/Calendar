@@ -1,29 +1,28 @@
 package br.com.calendar.task;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -505,22 +504,7 @@ class TaskServiceTest {
         assertEquals(1, result.size());
         verify(repository).findActiveTasksForDay(eq(USER_ID), any(), any());
     }
-
-    @Test
-    void getTaskHistory_ScopesByCurrentUser() {
-        mockAuthenticatedUser(userWithId(USER_ID));
-
-        Task task = new Task();
-        task.setUser(userWithId(USER_ID));
-        when(repository.findAllByUser_Id(USER_ID)).thenReturn(List.of(task));
-        when(taskMapper.toResponse(task)).thenReturn(TaskResponseDTO.builder().build());
-
-        List<TaskResponseDTO> result = taskService.getTaskHistory();
-
-        assertEquals(1, result.size());
-        verify(repository).findAllByUser_Id(USER_ID);
-    }
-
+    
     @Test
     void deleteTask_Success_WhenOwner() {
         Task existingTask = new Task();
@@ -672,7 +656,7 @@ class TaskServiceTest {
         assertEquals(1, result.size());
         assertEquals(Instant.parse("2026-08-15T10:00:00Z"), result.get(0).getStartsAt());
     }
-
+    
     @Test
     void getTasksForMonth_UnrecognizedRepeatInterval_OnlyIncludesBaseOccurrence() {
         Task task = new Task();

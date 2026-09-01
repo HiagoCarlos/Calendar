@@ -11,7 +11,6 @@ import lombok.Setter;
 @Setter
 @Builder
 public class TaskResponseDTO {
-
     private String id;
 
     private String title;
