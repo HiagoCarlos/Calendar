@@ -103,4 +103,18 @@ class CategoryControllerTest {
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$").isEmpty());
     }
+
+    @Test
+    void createsCategoryReturns401WhenNotAuthenticated() throws Exception {
+        mockMvc.perform(post("/categories")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Work\",\"color\":\"3366FF\",\"icon\":\"briefcase\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getCategoriesReturns401WhenNotAuthenticated() throws Exception {
+        mockMvc.perform(get("/categories"))
+                .andExpect(status().isUnauthorized());
+    }
 }
