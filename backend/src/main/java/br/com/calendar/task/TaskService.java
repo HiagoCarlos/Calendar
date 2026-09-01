@@ -194,7 +194,6 @@ public class TaskService {
             repository.delete(task);
         });
     }  
-    
     /**
     * Returns the task history for the currently authenticated user,
     * mapped to TaskResponseDTO. Delegates the actual filtering/ordering

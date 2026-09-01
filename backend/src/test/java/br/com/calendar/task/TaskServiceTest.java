@@ -504,8 +504,7 @@ class TaskServiceTest {
         assertEquals(1, result.size());
         verify(repository).findActiveTasksForDay(eq(USER_ID), any(), any());
     }
-
-
+    
     @Test
     void deleteTask_Success_WhenOwner() {
         Task existingTask = new Task();
