@@ -193,11 +193,18 @@ public class TaskService {
             checkOwnership(task);
             repository.delete(task);
         });
-    }
-
-
+    }  
+    
+    /**
+    * Returns the task history for the currently authenticated user,
+    * mapped to TaskResponseDTO. Delegates the actual filtering/ordering
+    * logic to the repository query (findTaskHistory).
+    */
     public Page<TaskResponseDTO> getTaskHistory(Pageable pageable) {
         String userId = currentUser().getId();
+         // "now" is computed here instead of using the database's
+        // CURRENT_TIMESTAMP so the reference instant is explicit and
+        // testable (can be swapped for a fixed Clock later if needed).
         Instant now = Instant.now();
         return repository.findTaskHistory(userId, now, pageable)
             .map(taskMapper::toResponse);

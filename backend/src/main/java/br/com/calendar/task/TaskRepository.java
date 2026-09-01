@@ -44,6 +44,17 @@ public interface TaskRepository extends JpaRepository<Task, String> {
             " ORDER BY t.startsAt")
     List<Task> findActiveTasksForMonth(@Param("userId") String userId, @Param("monthStart") Instant monthStart, @Param("monthEnd") Instant monthEnd);
 
+    /**
+     * History query: returns tasks that either already started
+     * (startsAt < now) or have been completed (completedAt IS NOT NULL).
+     * Ordered by COALESCE(completedAt, startsAt) DESC, so a completed
+     * task is ranked by when it was completed, and a task that's simply
+     * overdue is ranked by when it started.
+     * Soft-deleted tasks are NOT filtered out on purpose: the history
+     * view is expected to show them too (see #137, confirmed with team).
+     * A separate countQuery is provided because Hibernate can't always
+     * derive an accurate count from a query with ORDER BY + COALESCE
+     */
     @Query(
     value = "SELECT t FROM Task t " +
             "WHERE t.user.id = :userId " +

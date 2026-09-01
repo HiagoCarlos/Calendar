@@ -42,7 +42,7 @@ public class TaskController {
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(service.getTasksForDay(date));
     }
-
+    
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTask(@PathVariable String id) {
         service.deleteTask(id);
@@ -65,10 +65,11 @@ public class TaskController {
         return ResponseEntity.ok(service.updateTask(task, id));
     }
 
-    @GetMapping("/tasks/history")
-    public Page<TaskResponseDTO> getTaskHistory(
+    @GetMapping("/history")
+    public ResponseEntity<Page<TaskResponseDTO>> getTaskHistory(
         @PageableDefault(size = 20) Pageable pageable) {
-        return service.getTaskHistory(pageable); 
-        
+        return ResponseEntity.ok(service.getTaskHistory(pageable));
 }
+        
+
 }

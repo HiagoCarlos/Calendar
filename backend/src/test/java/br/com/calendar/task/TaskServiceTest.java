@@ -506,7 +506,6 @@ class TaskServiceTest {
     }
 
 
-
     @Test
     void deleteTask_Success_WhenOwner() {
         Task existingTask = new Task();
@@ -658,7 +657,7 @@ class TaskServiceTest {
         assertEquals(1, result.size());
         assertEquals(Instant.parse("2026-08-15T10:00:00Z"), result.get(0).getStartsAt());
     }
-
+    
     @Test
     void getTasksForMonth_UnrecognizedRepeatInterval_OnlyIncludesBaseOccurrence() {
         Task task = new Task();
@@ -744,6 +743,4 @@ class TaskServiceTest {
         assertEquals("late", result.get(0).getId());
         assertEquals("early", result.get(1).getId());
     }
-
-    
 }
