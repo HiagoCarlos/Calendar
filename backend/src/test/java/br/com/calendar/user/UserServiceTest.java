@@ -59,7 +59,6 @@ class UserServiceTest {
         savedUser.setId(USER_ID);
         UserResponseDTO expected = new UserResponseDTO(USER_ID, "Danillo", "test@example.com", false, null, null);
 
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
         when(userMapper.toEntity(dto)).thenReturn(mappedUser);
         when(passwordEncoder.encode("plain-password")).thenReturn("hashed-password");
         when(userRepository.save(mappedUser)).thenReturn(savedUser);
@@ -76,21 +75,22 @@ class UserServiceTest {
     @Test
     void createUserWithExistingEmailThrows() {
         CreateUserDTO dto = new CreateUserDTO("Danillo", "test@example.com", "plain-password");
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(new User()));
+        User mappedUser = new User();
+        
+        when(userMapper.toEntity(dto)).thenReturn(mappedUser);
+        when(passwordEncoder.encode("plain-password")).thenReturn("hashed-password");
+        when(userRepository.save(mappedUser)).thenThrow(new DataIntegrityViolationException("duplicate key"));
 
         assertThrows(ResponseStatusException.class, () -> userService.createUser(dto));
 
-        verify(userRepository, never()).save(any(User.class));
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
     void createUserWithEmailTakenByAConcurrentSignupThrows() {
-        // findByEmail sees nothing (no race yet), but the unique constraint
-        // catches it at insert time — the classic TOCTOU race.
         CreateUserDTO dto = new CreateUserDTO("Danillo", "test@example.com", "plain-password");
         User mappedUser = new User();
 
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
         when(userMapper.toEntity(dto)).thenReturn(mappedUser);
         when(passwordEncoder.encode("plain-password")).thenReturn("hashed-password");
         when(userRepository.save(mappedUser)).thenThrow(new DataIntegrityViolationException("duplicate key"));

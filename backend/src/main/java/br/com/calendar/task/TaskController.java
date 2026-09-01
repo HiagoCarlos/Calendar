@@ -37,19 +37,25 @@ public class TaskController {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.createTask(task));
     }
 
-    @GetMapping
+    @GetMapping(params = "date")
     public ResponseEntity<List<TaskResponseDTO>> getTasksByDay(
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(service.getTasksForDay(date));
     }
-    
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTask(@PathVariable String id) {
         service.deleteTask(id);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/month")
+    @GetMapping("/history")
+    public ResponseEntity<Page<TaskResponseDTO>> getTaskHistory(
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(service.getTaskHistory(pageable));
+    }
+
+    @GetMapping(params = {"month", "year"})
     public ResponseEntity<List<TaskMonthResponseDTO>> getTasksByMonth(
             @RequestParam("month") int month, @RequestParam("year") int year) {
         return ResponseEntity.ok(service.getTasksForMonth(month, year));
@@ -64,12 +70,4 @@ public class TaskController {
     public ResponseEntity<TaskResponseDTO> patchTask(@PathVariable String id, @RequestBody TaskRequestDTO task) {
         return ResponseEntity.ok(service.updateTask(task, id));
     }
-
-    @GetMapping("/history")
-    public ResponseEntity<Page<TaskResponseDTO>> getTaskHistory(
-        @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(service.getTaskHistory(pageable));
-}
-        
-
 }

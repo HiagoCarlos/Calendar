@@ -16,7 +16,6 @@ import br.com.calendar.user.UserService;
 import br.com.calendar.user.dto.CreateUserDTO;
 import br.com.calendar.user.dto.OtpResponseDTO;
 import br.com.calendar.user.dto.UserResponseDTO;
-import br.com.calendar.user.dto.UserSummaryDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -141,11 +140,6 @@ public class AuthService {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired code");
     }
 
-    public UserSummaryDTO me(String userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        return new UserSummaryDTO(user.getId(), user.getName(), user.getEmail());
-    }
 
     public void logout(String token) {
         if (token == null || token.isBlank()) {
